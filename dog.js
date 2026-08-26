@@ -871,8 +871,9 @@ class PeeParticle {
     this.vy = random(2, 5);
     this.angle = random(TWO_PI);
     this.vAngle = random(-0.15, 0.15);
-    this.size = random(10, 50); // Randomize size between 10 and 35
+    this.size = random(10, 50); // Randomize size between 10 and 50
     this.opacity = 255;
+    this.id = Math.random();
   }
 
   update() {
@@ -895,13 +896,17 @@ class PeeParticle {
     rotate(this.angle);
     imageMode(CENTER);
 
-    // Set tint for opacity
-    tint(255, this.opacity);
+    // Use native globalAlpha instead of p5's extremely slow CPU-bound tint()
+    drawingContext.globalAlpha = Math.max(0, this.opacity / 255.0);
 
     let imgAspectRatio = this.img.width / this.img.height;
     let imgW = this.size * imgAspectRatio;
     let imgH = this.size;
+    
     image(this.img, 0, 0, imgW, imgH);
+    
+    // Reset global alpha so it doesn't affect other rendering
+    drawingContext.globalAlpha = 1.0;
     pop();
   }
 }
@@ -930,41 +935,63 @@ function updateAndDrawPeeParticles(markers) {
     p.update();
   }
 
-  // Resolve circle-circle collisions (liquid-like push apart)
-  for (let i = 0; i < peeParticles.length; i++) {
-    let pA = peeParticles[i];
-    for (let j = i + 1; j < peeParticles.length; j++) {
-      let pB = peeParticles[j];
+  // Resolve circle-circle collisions using Spatial Hashing to prevent O(N^2) lag
+  let cellSize = 50; // slightly larger than max particle size
+  let grid = {};
 
-      // Calculate dynamic clearance based on their sizes (roughly 85% of their combined radii)
-      let clearance = ((pA.size + pB.size) / 2) * 0.85;
+  // 1. Assign particles to grid cells
+  for (let p of peeParticles) {
+    p._cx = Math.floor(p.x / cellSize);
+    p._cy = Math.floor(p.y / cellSize);
+    let key = p._cx + "," + p._cy;
+    if (!grid[key]) grid[key] = [];
+    grid[key].push(p);
+  }
 
-      let dx = pA.x - pB.x;
-      let dy = pA.y - pB.y;
-      let distSq = dx * dx + dy * dy;
-      if (distSq < clearance * clearance) {
-        let d = Math.sqrt(distSq);
-        if (d === 0) {
-          pA.x += random(-1, 1);
-          pA.y += random(-1, 1);
-          continue;
+  // 2. Check collisions only within adjacent cells
+  for (let pA of peeParticles) {
+    for (let ox = -1; ox <= 1; ox++) {
+      for (let oy = -1; oy <= 1; oy++) {
+        let key = (pA._cx + ox) + "," + (pA._cy + oy);
+        if (grid[key]) {
+          for (let pB of grid[key]) {
+            // Only process each pair once using their unique ids
+            if (pA.id >= pB.id) continue;
+
+            let clearance = ((pA.size + pB.size) / 2) * 0.85;
+            let dx = pA.x - pB.x;
+            let dy = pA.y - pB.y;
+            
+            // Fast bounding box check before expensive Math.sqrt
+            if (Math.abs(dx) > clearance || Math.abs(dy) > clearance) continue;
+
+            let distSq = dx * dx + dy * dy;
+            if (distSq < clearance * clearance) {
+              let d = Math.sqrt(distSq);
+              if (d === 0) {
+                pA.x += random(-1, 1);
+                pA.y += random(-1, 1);
+                continue;
+              }
+
+              let overlap = clearance - d;
+              let pushX = (dx / d) * overlap * 0.5;
+              let pushY = (dy / d) * overlap * 0.5;
+
+              pA.x += pushX;
+              pA.y += pushY;
+              pB.x -= pushX;
+              pB.y -= pushY;
+
+              // Add a bit of horizontal flow when particles press against each other
+              let flowFactor = 0.08;
+              pA.vx += pushX * flowFactor;
+              pA.vy += pushY * flowFactor;
+              pB.vx -= pushX * flowFactor;
+              pB.vy -= pushY * flowFactor;
+            }
+          }
         }
-
-        let overlap = clearance - d;
-        let pushX = (dx / d) * overlap * 0.5;
-        let pushY = (dy / d) * overlap * 0.5;
-
-        pA.x += pushX;
-        pA.y += pushY;
-        pB.x -= pushX;
-        pB.y -= pushY;
-
-        // Add a bit of horizontal flow when particles press against each other
-        let flowFactor = 0.08;
-        pA.vx += pushX * flowFactor;
-        pA.vy += pushY * flowFactor;
-        pB.vx -= pushX * flowFactor;
-        pB.vy -= pushY * flowFactor;
       }
     }
   }
@@ -989,8 +1016,8 @@ function updateAndDrawPeeParticles(markers) {
     peeParticles = peeParticles.filter(p => p.opacity > 0);
   }
 
-  // Cap total particles at 150 to maintain performance
-  if (peeParticles.length > 150) {
+  // Cap total particles at 300 to maintain performance
+  if (peeParticles.length > 300) {
     peeParticles.shift(); // Remove the oldest particle
   }
 
