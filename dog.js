@@ -1,0 +1,960 @@
+// Override getContext to set willReadFrequently attribute to true to silence Chrome warnings
+const originalGetContext = HTMLCanvasElement.prototype.getContext;
+HTMLCanvasElement.prototype.getContext = function (type, attributes) {
+  if (type === '2d') {
+    attributes = attributes || {};
+    attributes.willReadFrequently = true;
+  }
+  return originalGetContext.call(this, type, attributes);
+};
+
+let bmw;
+let walkerHeight = 380;
+let speedSlider;
+let happinessSlider;
+let randomizeButton;
+let letters = ["M", "o", "s", "h", "i", "m", "b", "o"];
+
+let logoImages = [];
+let fixedLogoImages = {};
+let angryImages = [];
+let happyImages = [];
+let sadImages = [];
+
+let currentImagesMode = 'logo'; // 'logo', 'angry', 'happy', 'sad'
+let activeBone1 = -1;
+let activeBone2 = -1;
+let activeBone3 = -1;
+let activeBone4 = -1;
+let activeEmotionImg1 = null;
+let activeEmotionImg2 = null;
+let activeEmotionImg3 = null;
+let activeEmotionImg4 = null;
+let lastImageSwitchTime = 0;
+let lastPositionSwitchTime = 0;
+
+let peeParticles = [];
+let releasePeeParticles = true;
+let targetSliderSpeed = 1.0;
+let targetSliderHappiness = 0.0;
+
+let isEating = false;
+let bowlImg;
+let bowlX = 2000; // start off-screen right
+let targetBowlX = 2000;
+let targetBowlY = 100;
+let ufo = {
+  state: 'hidden',
+  stateStartTime: 0,
+  x: -1000, y: -1000,
+  startX: 0, startY: 0,
+  endX: 0, endY: 0,
+  ctrlX: 0, ctrlY: 0
+};
+function evalQuadBezier(p0, p1, p2, t) {
+  return Math.pow(1 - t, 2) * p0 + 2 * (1 - t) * t * p1 + Math.pow(t, 2) * p2;
+}
+
+let bgScrollX = 0;
+let walkingSpeed = 5.5;
+let runningSpeed = 18.0;
+let currentMotionType = "walk";
+
+let bgTreeImg, bgRainbowImg, bgSpaceshipImg, bgMushroomImg;
+function preload() {
+  bgTreeImg = loadImage('images_rep/background/tree.png');
+  bgRainbowImg = loadImage('images_rep/background/rainbow.png');
+  bgSpaceshipImg = loadImage('images_rep/background/spaceship.png');
+  bgMushroomImg = loadImage('images_rep/background/mushroom.png');
+
+  fixedLogoImages[0] = loadImage('logo/svg/m.svg');
+  fixedLogoImages[2] = loadImage('logo/svg/b.svg');
+  fixedLogoImages[3] = loadImage('logo/svg/o.svg');
+
+  logoImages.push(loadImage('logo/svg/m.svg'));
+  logoImages.push(loadImage('logo/svg/o.svg'));
+  logoImages.push(loadImage('logo/svg/s.svg'));
+  logoImages.push(loadImage('logo/svg/h.svg'));
+  logoImages.push(loadImage('logo/svg/i.svg'));
+  logoImages.push(loadImage('logo/svg/m2.svg'));
+  logoImages.push(loadImage('logo/svg/b.svg'));
+  logoImages.push(loadImage('logo/svg/o2.svg'));
+
+  let angryFiles = [
+    "angry-0.png", "angry-1.gif", "angry-2.png", "angry-3.png", "angry-4.png",
+    "angry-5.png", "angry-6.png", "angry-7.png", "angry-9.png",
+    "angry-10.png"
+  ];
+  angryFiles.forEach(f => angryImages.push(loadImage('images_rep/angry/' + f)));
+
+  let happyFiles = [
+    "happy-0.png", "happy-1.png", "happy-2.png", "happy-3.png", "happy-4.png",
+    "happy-5.png", "happy-6.png", "happy-7.png", "happy-8.png", "happy-9.png", "happy-10.gif"
+  ];
+  happyFiles.forEach(f => happyImages.push(loadImage('images_rep/Happy/' + f)));
+
+  let sadFiles = [
+    "sad-0.png", "sad-1.png", "sad-2.png", "sad-3.png", "sad-4.png",
+    "sad-5.png", "sad-6.png", "sad-7.png", "sad-8.png", "sad-9.png", "sad-10.png", "sad-11.png"
+  ];
+  sadFiles.forEach(f => sadImages.push(loadImage('images_rep/sad/' + f)));
+
+  bowlImg = loadImage('bowl.png');
+}
+
+// 1. Custom Joint Index Names (since Dog type in the library doesn't have default names)
+const dogJointNames = [
+  "L-Paw-Front",   // 0
+  "L-Elbow-Front", // 1
+  "L-Shoulder",    // 2
+  "Neck",          // 3
+  "Chest",         // 4
+  "L-Paw-Back",    // 5
+  "L-Knee-Back",   // 6
+  "L-Hip",         // 7
+  "Pelvis",        // 8
+  "Head",          // 9
+  "Belly",         // 10
+  "Tail",          // 11
+  "R-Paw-Front",   // 12
+  "R-Elbow-Front", // 13
+  "R-Shoulder",    // 14
+  "R-Paw-Back",    // 15
+  "R-Knee-Back",   // 16
+  "R-Hip",         // 17
+  "Tail-Mid",      // 18
+  "Tail-End"       // 19
+];
+
+// 2. Custom Bone Connections
+const dogBones = [
+  [9, 3],   // Head to Neck
+  [3, 4],   // Neck to Chest
+  [4, 10],  // Chest to Belly
+  [10, 8],  // Belly to Pelvis
+  [8, 11],  // Pelvis to Tail
+  [11, 18], // Tail to Tail-Mid
+  [18, 19], // Tail-Mid to Tail-End
+
+  // Front Left Leg
+  [4, 2],   // Chest to L-Shoulder
+  [2, 1],   // L-Shoulder to L-Elbow
+  [1, 0],   // L-Elbow to L-Paw
+
+  // Front Right Leg
+  [4, 14],  // Chest to R-Shoulder
+  [14, 13], // R-Shoulder to R-Elbow
+  [13, 12], // R-Elbow to R-Paw
+
+  // Back Left Leg
+  [8, 7],   // Pelvis to L-Hip
+  [7, 6],   // L-Hip to L-Knee
+  [6, 5],   // L-Knee to L-Paw
+
+  // Back Right Leg
+  [8, 17],  // Pelvis to R-Hip
+  [17, 16], // R-Hip to R-Knee
+  [16, 15]  // R-Knee to R-Paw
+];
+
+function setup() {
+
+  let canvas = createCanvas(windowWidth, windowHeight);
+  canvas.parent('canvas-container');
+
+  // Adjust UI positions that might have relied on fixed width?
+  // The user UI controls (buttons, sliders) are fixed at top-left, which is fine.
+
+  // Type 1 is the Dog walk cycle (modified from the original cat walk cycle)
+  bmw = new BMWalker(BMW_TYPE_DOG);
+
+  speedSlider = createSlider(-4, 4, 1, 0.1);
+  speedSlider.position(20, 20);
+
+  // Custom happiness slider (controls tail wagging)
+  happinessSlider = createSlider(0, 10, 3, 1);
+  happinessSlider.position(20, 50);
+
+  // Randomize Button
+  randomizeButton = createButton('Randomize Images');
+  randomizeButton.position(20, 80);
+  randomizeButton.mousePressed(shuffleImages);
+
+  let btnLogo = createButton('Logo');
+  btnLogo.position(20, 110);
+  btnLogo.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('logo'); });
+
+  let btnAngry = createButton('Angry');
+  btnAngry.position(70, 110);
+  btnAngry.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('angry'); });
+
+  let btnHappy = createButton('Happy');
+  btnHappy.position(130, 110);
+  btnHappy.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('happy'); });
+
+  let btnSad = createButton('Sad');
+  btnSad.position(190, 110);
+  btnSad.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('sad'); });
+
+  // Initialize the Sidebar Control Panel UI
+
+}
+
+function draw() {
+  // Update targets if user is dragging happiness slider manually
+  if (mouseIsPressed && mouseX > 20 && mouseX < 170 && mouseY > 40 && mouseY < 75) {
+    targetSliderHappiness = happinessSlider.value();
+  } else {
+    // Interpolate towards target gradually
+    if (happinessSlider && happinessSlider.value() !== targetSliderHappiness) {
+      let current = happinessSlider.value();
+      let step = 0.125; // Transition step for happiness
+      if (Math.abs(current - targetSliderHappiness) < step) {
+        happinessSlider.value(targetSliderHappiness);
+      } else {
+        happinessSlider.value(current + Math.sign(targetSliderHappiness - current) * step);
+      }
+    }
+  }
+
+  // Always force speed slider to reflect the walker's actual internal speed
+  if (speedSlider) {
+    speedSlider.value(bmw.speed);
+  }
+
+  background(0);
+
+  // Draw UI Labels
+  fill(0);
+  noStroke();
+  textSize(16);
+  textAlign(LEFT, CENTER);
+  text(`Speed: ${speedSlider.value().toFixed(1)}x`, 180, 30);
+  text(`Happiness (Tail Wag): ${happinessSlider.value()}`, 180, 60);
+
+  // Move origin to center so walker is visible
+  translate(width / 2, height / 2);
+  // Update background scroll
+  if (currentMotionType === 'walk') {
+    bgScrollX += walkingSpeed;
+  } else if (currentMotionType === 'run') {
+    bgScrollX += runningSpeed;
+  } else if (currentMotionType === 'sniff') {
+    let loopWidth = Math.max(2400, width + 400);
+    let targetScroll = Math.ceil(bgScrollX / loopWidth) * loopWidth;
+    bgScrollX = lerp(bgScrollX, targetScroll, 0.05);
+  }
+
+  let loopWidth = Math.max(2400, width + 400);
+
+  function drawWrapped(img, baseX, y, w, h) {
+    if (!img) return;
+    let screenX = ((baseX - bgScrollX) % loopWidth + loopWidth) % loopWidth;
+    if (screenX > loopWidth / 2) screenX -= loopWidth;
+    
+    image(img, screenX, y, w, h);
+  }
+
+  push();
+  imageMode(CENTER);
+  if (bgTreeImg) {
+    drawWrapped(bgTreeImg, -450, 10, 130, 130);
+    drawWrapped(bgTreeImg, 420, 10, 130, 130);
+  }
+  if (bgRainbowImg) {
+    drawWrapped(bgRainbowImg, -850, 30, 80, 80);
+  }
+  if (bgMushroomImg) {
+    let mw = 50;
+    let mh = mw * (bgMushroomImg.height / bgMushroomImg.width);
+    drawWrapped(bgMushroomImg, 750, 40, mw, mh);
+  }
+  // Animated Spaceship logic
+  if (bgSpaceshipImg) {
+    let now = millis();
+    if (ufo.state === 'hidden') {
+      if (now - ufo.stateStartTime > 5000) {
+        // Prepare to enter
+        ufo.endX = random(-width/2 + 100, width/2 - 100);
+        ufo.endY = random(-height/2 + 50, -height/2 + height * 0.3); // Top 30%
+        
+        let fromRight = random(1) > 0.5;
+        ufo.startX = fromRight ? width/2 + 200 : -width/2 - 200;
+        ufo.startY = random(-height/2, -height/2 + height * 0.3);
+        
+        // Control point for a curve
+        ufo.ctrlX = (ufo.startX + ufo.endX) / 2;
+        ufo.ctrlY = Math.min(ufo.startY, ufo.endY) - 400; 
+        
+        ufo.state = 'entering';
+        ufo.stateStartTime = now;
+      }
+    } else if (ufo.state === 'entering') {
+      let t = (now - ufo.stateStartTime) / 1500.0;
+      if (t >= 1.0) {
+        ufo.state = 'hover_pre';
+        ufo.stateStartTime = now;
+        ufo.x = ufo.endX;
+        ufo.y = ufo.endY;
+      } else {
+        ufo.x = evalQuadBezier(ufo.startX, ufo.ctrlX, ufo.endX, t);
+        ufo.y = evalQuadBezier(ufo.startY, ufo.ctrlY, ufo.endY, t);
+      }
+    } else if (ufo.state === 'hover_pre') {
+      if (now - ufo.stateStartTime > 500) {
+        ufo.state = 'vibrating';
+        ufo.stateStartTime = now;
+      } else {
+        ufo.x = ufo.endX;
+        ufo.y = ufo.endY + Math.sin(now / 200) * 5;
+      }
+    } else if (ufo.state === 'vibrating') {
+      if (now - ufo.stateStartTime > 1500) {
+        ufo.state = 'hover_post';
+        ufo.stateStartTime = now;
+      } else {
+        ufo.x = ufo.endX;
+        ufo.y = ufo.endY + Math.sin(now / 200) * 5;
+      }
+    } else if (ufo.state === 'hover_post') {
+      if (now - ufo.stateStartTime > 500) {
+        ufo.startX = ufo.x;
+        ufo.startY = ufo.y;
+        
+        let toRight = random(1) > 0.5;
+        ufo.endX = toRight ? width/2 + 200 : -width/2 - 200;
+        ufo.endY = random(-height/2, -height/2 + height * 0.3);
+        
+        ufo.ctrlX = (ufo.startX + ufo.endX) / 2;
+        ufo.ctrlY = Math.min(ufo.startY, ufo.endY) - 400;
+        
+        ufo.state = 'leaving';
+        ufo.stateStartTime = now;
+      } else {
+        ufo.x = ufo.endX;
+        ufo.y = ufo.endY + Math.sin(now / 200) * 5;
+      }
+    } else if (ufo.state === 'leaving') {
+      let t = (now - ufo.stateStartTime) / 1500.0;
+      if (t >= 1.0) {
+        ufo.state = 'hidden';
+        ufo.stateStartTime = now;
+      } else {
+        ufo.x = evalQuadBezier(ufo.startX, ufo.ctrlX, ufo.endX, t);
+        ufo.y = evalQuadBezier(ufo.startY, ufo.ctrlY, ufo.endY, t);
+      }
+    }
+
+    if (ufo.state !== 'hidden') {
+      let sw = 60; // Make it a little smaller
+      let sh = sw * (bgSpaceshipImg.height / bgSpaceshipImg.width);
+      image(bgSpaceshipImg, ufo.x, ufo.y, sw, sh);
+    }
+  }
+  pop();
+
+  // Set side profile angle (azimuth = PI / 2) so the dog walks sideways
+  bmw.setCameraParam(PI / 2, 0, 0, 0);
+
+  // Get the markers for the current frame
+  let markers = bmw.getMarkers(walkerHeight, undefined, mouseX, mouseY);
+
+  // Handle eating animation AND draw bowl (so it renders behind the dog)
+  if (isEating) {
+    let pawX = markers[0] ? markers[0].x : 100;
+    let floorY = markers[0] ? markers[0].y : 100; // Paw Y is floor
+    targetBowlX = pawX + 117; // exactly below head point
+    targetBowlY = floorY - 10;     // lowered so bowl bottom perfectly aligns with paws
+
+    bowlX = lerp(bowlX, targetBowlX, 0.1);
+  } else {
+    targetBowlX = width / 2 + 100;
+    if (bowlX < targetBowlX - 5) {
+      bowlX = lerp(bowlX, targetBowlX, 0.1);
+    } else {
+      bowlX = targetBowlX;
+    }
+  }
+
+  if (bowlX < width / 2 + 90 && bowlImg) {
+    push();
+    imageMode(CENTER);
+    let aspect = bowlImg.width / bowlImg.height;
+    let bWidth = 80;
+    let bHeight = bWidth / aspect;
+    image(bowlImg, bowlX, targetBowlY, bWidth, bHeight);
+    pop();
+  }
+
+  // Update and draw pee particles
+  updateAndDrawPeeParticles(markers);
+
+  // Update happiness parameter of the walker dynamically
+  let targetHappiness = happinessSlider.value();
+  if (bmw.happiness !== targetHappiness) {
+    bmw.setWalkerParam(undefined, undefined, undefined, targetHappiness);
+  }
+
+  // Check if skeleton toggle is checked
+  let showSkeleton = true;
+  let toggleSkeleton = document.getElementById('toggle-skeleton');
+  if (toggleSkeleton) {
+    showSkeleton = toggleSkeleton.checked;
+  }
+
+  // Check if image rotation toggle is checked
+  let rotateImages = true;
+  let toggleRotate = document.getElementById('toggle-rotate-images');
+  if (toggleRotate) {
+    rotateImages = toggleRotate.checked;
+  }
+
+  // Draw bones as lines
+  if (showSkeleton) {
+    stroke(100);
+    strokeWeight(3);
+    dogBones.forEach((bone) => {
+      let jointA = markers[bone[0]];
+      let jointB = markers[bone[1]];
+      if (jointA && jointB) {
+        line(jointA.x, jointA.y, jointB.x, jointB.y);
+      }
+    });
+  }
+
+  // Check if show images toggle is checked
+  let showImages = true;
+  let toggleShowImages = document.getElementById('toggle-show-images');
+  if (toggleShowImages) {
+    showImages = toggleShowImages.checked;
+  }
+
+  // Handle special image modes: images change every 3s, positions change every 1s
+  if (currentImagesMode !== 'logo') {
+    let sourceArray = [];
+    if (currentImagesMode === 'angry') sourceArray = angryImages;
+    else if (currentImagesMode === 'happy') sourceArray = happyImages;
+    else if (currentImagesMode === 'sad') sourceArray = sadImages;
+
+    if (sourceArray.length > 0) {
+      let currentTime = millis();
+      // Change images every 3 seconds
+      if (currentTime - lastImageSwitchTime >= 3000) {
+        lastImageSwitchTime = currentTime;
+        let pickedIndices = [];
+        if (sourceArray.length >= 4) {
+          while (pickedIndices.length < 4) {
+            let r = Math.floor(random(sourceArray.length));
+            if (!pickedIndices.includes(r)) pickedIndices.push(r);
+          }
+        } else {
+          while (pickedIndices.length < 4) {
+            pickedIndices.push(Math.floor(random(sourceArray.length)));
+          }
+        }
+        activeEmotionImg1 = sourceArray[pickedIndices[0]];
+        activeEmotionImg2 = sourceArray[pickedIndices[1]];
+        activeEmotionImg3 = sourceArray[pickedIndices[2]];
+        activeEmotionImg4 = sourceArray[pickedIndices[3]];
+      }
+
+      // Change positions every 1 second
+      if (currentTime - lastPositionSwitchTime >= 1000) {
+        lastPositionSwitchTime = currentTime;
+        let numBones = dogBones.length;
+
+        // Pick 4 unique random bones
+        let picked = [];
+        if (numBones >= 4) {
+          while (picked.length < 4) {
+            let r = Math.floor(random(numBones));
+            if (!picked.includes(r)) picked.push(r);
+          }
+        } else {
+          while (picked.length < 4) {
+            picked.push(Math.floor(random(numBones)));
+          }
+        }
+        activeBone1 = picked[0];
+        activeBone2 = picked[1];
+        activeBone3 = picked[2];
+        activeBone4 = picked[3];
+      }
+    }
+  }
+
+  // Draw bones as logo images (upright, no rotation)
+  if (showImages) {
+    imageMode(CENTER);
+    dogBones.forEach((bone, idx) => {
+      let jointA = markers[bone[0]];
+      let jointB = markers[bone[1]];
+      if (jointA && jointB) {
+        let img = logoImages.length > 0 ? logoImages[idx % logoImages.length] : null;
+        if (fixedLogoImages[idx]) {
+          img = fixedLogoImages[idx];
+        }
+        if (currentImagesMode !== 'logo') {
+          if (idx === activeBone1 && activeEmotionImg1) img = activeEmotionImg1;
+          else if (idx === activeBone2 && activeEmotionImg2) img = activeEmotionImg2;
+          else if (idx === activeBone3 && activeEmotionImg3) img = activeEmotionImg3;
+          else if (idx === activeBone4 && activeEmotionImg4) img = activeEmotionImg4;
+        }
+        if (img) {
+          let xA = jointA.x;
+          let yA = jointA.y;
+          let xB = jointB.x;
+          let yB = jointB.y;
+
+          let midX = (xA + xB) / 2;
+          let midY = (yA + yB) / 2;
+          let d = dist(xA, yA, xB, yB);
+
+          // Get the heading (direction) of the line going between two marker points
+          let heading = atan2(yB - yA, xB - xA);
+
+          let isHorizontal = img.width >= img.height;
+          let rotationAngle = rotateImages ? (isHorizontal ? heading : (heading - PI / 2)) : 0;
+
+          let isEmotionImg = (currentImagesMode !== 'logo' && (idx === activeBone1 || idx === activeBone2 || idx === activeBone3 || idx === activeBone4));
+
+          let imgW, imgH;
+          let aspect = img.width / img.height;
+          if (isEmotionImg) {
+            if (isHorizontal) {
+              imgW = d;
+              imgH = d / aspect;
+            } else {
+              imgH = d;
+              imgW = d * aspect;
+            }
+          } else {
+            if (isHorizontal) {
+              imgW = d;
+              imgH = d / 1.5;
+            } else {
+              imgH = d;
+              imgW = d / 1.5;
+            }
+          }
+
+          push();
+          translate(midX, midY);
+          if (rotationAngle !== 0) {
+            rotate(rotationAngle);
+          }
+          image(img, 0, 0, imgW, imgH);
+          pop();
+        }
+      }
+    });
+  }
+
+  // Draw each marker (joints)
+  if (showSkeleton) {
+    markers.forEach((m, index) => {
+      // Highlight Left side in Red, Right side in Blue, spine in Black
+      let col = color(0);
+      if (index < 3 || (index >= 5 && index <= 7)) {
+        col = color(200, 0, 0); // Red for Left limbs
+      } else if ((index >= 12 && index <= 14) || index >= 15) {
+        col = color(0, 0, 200); // Blue for Right limbs
+      }
+
+      // Draw joint point
+      fill(col);
+      noStroke();
+      circle(m.x, m.y, 8);
+
+      // Draw description text to the left
+      let jointName = dogJointNames[index];
+      fill(0);
+      textSize(10);
+      textAlign(RIGHT, CENTER);
+      text(jointName, m.x - 10, m.y);
+    });
+  }
+}
+
+function shuffleImages() {
+  // Shuffle letters
+  for (let i = letters.length - 1; i > 0; i--) {
+    const j = Math.floor(random(i + 1));
+    let temp = letters[i];
+    letters[i] = letters[j];
+    letters[j] = temp;
+  }
+  // Shuffle logo images
+  for (let i = logoImages.length - 1; i > 0; i--) {
+    const j = Math.floor(random(i + 1));
+    let temp = logoImages[i];
+    logoImages[i] = logoImages[j];
+    logoImages[j] = temp;
+  }
+}
+
+// --- Control Panel Integration Helper Functions ---
+
+window.setImagesMode = function (mode) {
+  currentImagesMode = mode;
+  lastImageSwitchTime = 0; // force immediate update next frame
+  lastPositionSwitchTime = 0;
+};
+
+window.onSliderChange = function (index, axis, value) {
+  let val = parseFloat(value);
+  if (axis === 'x') {
+    bmw.setJointOffset(index, val, undefined, undefined);
+    let el = document.getElementById(`offset-x-${index}`);
+    if (el) el.innerText = (val >= 0 ? "+" : "") + val;
+  } else if (axis === 'z') {
+    bmw.setJointOffset(index, undefined, undefined, val);
+    let el = document.getElementById(`offset-z-${index}`);
+    if (el) el.innerText = (val >= 0 ? "+" : "") + val;
+  }
+};
+
+window.onAmplitudeChange = function (index, value) {
+  let val = parseFloat(value);
+  bmw.setJointAmplitude(index, val);
+  let el = document.getElementById(`offset-a-${index}`);
+  if (el) el.innerText = val.toFixed(2) + "×";
+};
+
+window.onMotionTypeChange = function (type) {
+  currentMotionType = type;
+  if (bmw && bmw.setMotionType) {
+    if (type === 'eat') {
+      bmw.setMotionType('eat');
+      isEating = true;
+    } else {
+      bmw.setMotionType(type);
+      isEating = false;
+      targetBowlX = 900;
+    }
+  }
+
+  if (type === 'walk') {
+    targetSliderSpeed = 1.0;
+    targetSliderHappiness = 5.0;
+  } else if (type === 'run') {
+    targetSliderSpeed = 2.0;
+  } else if (type === 'eat' || type === 'sniff') {
+    targetSliderSpeed = 0.0;
+  }
+
+  let stopPeeBtn = document.getElementById('stop-pee-btn');
+  let stopEatBtn = document.getElementById('stop-eat-btn');
+
+  if (type === 'pee') {
+    releasePeeParticles = true;
+    if (stopPeeBtn) stopPeeBtn.style.display = 'inline-block';
+  } else {
+    if (stopPeeBtn) stopPeeBtn.style.display = 'none';
+  }
+
+  if (type === 'eat') {
+    if (stopEatBtn) stopEatBtn.style.display = 'inline-block';
+  } else {
+    if (stopEatBtn) stopEatBtn.style.display = 'none';
+  }
+};
+
+window.stopEating = function () {
+  isEating = false;
+  targetBowlX = 900;
+  let stopEatBtn = document.getElementById('stop-eat-btn');
+  if (stopEatBtn) stopEatBtn.style.display = 'none';
+
+  let select = document.getElementById('motion-type-select');
+  if (select) select.value = 'walk';
+  if (bmw) bmw.setMotionType('walk');
+
+  window.resetAllOffsets();
+};
+
+window.stopPeeing = function () {
+  releasePeeParticles = false;
+  let stopBtn = document.getElementById('stop-pee-btn');
+  if (stopBtn) {
+    stopBtn.style.display = 'none';
+  }
+};
+
+window.resetAllOffsets = function () {
+  peeParticles = [];
+  if (bmw) bmw.isConfigLoaded = false;
+  targetSliderSpeed = 1.0;
+  targetSliderHappiness = 0.0;
+  for (let i = 0; i < 20; i++) {
+    bmw.setJointOffset(i, 0, 0, 0);
+    bmw.setJointAmplitude(i, 1.0);
+    let sliderX = document.getElementById(`slider-x-${i}`);
+    let sliderZ = document.getElementById(`slider-z-${i}`);
+    let sliderA = document.getElementById(`slider-a-${i}`);
+    let elX = document.getElementById(`offset-x-${i}`);
+    let elZ = document.getElementById(`offset-z-${i}`);
+    let elA = document.getElementById(`offset-a-${i}`);
+    if (sliderX) sliderX.value = 0;
+    if (sliderZ) sliderZ.value = 0;
+    if (sliderA) sliderA.value = 1;
+    if (elX) elX.innerText = "0";
+    if (elZ) elZ.innerText = "0";
+    if (elA) elA.innerText = "1.00×";
+  }
+};
+
+window.saveConfigToJSON = function () {
+  // Prompt for a name (default: "dog-walk")
+  let name = prompt("Name this configuration:", "dog-walk");
+  if (name === null) return; // user cancelled
+  if (!name.trim()) name = "dog-walk";
+
+  const config = {
+    name: name.trim(),
+    savedAt: new Date().toISOString(),
+    speed: speedSlider.value(),
+    happiness: happinessSlider.value(),
+    joints: dogJointNames.map((jointName, i) => ({
+      index: i,
+      name: jointName,
+      offsetX: bmw.jointOffsets[i].x,
+      offsetZ: bmw.jointOffsets[i].z,
+      amplitude: bmw.jointAmplitudes[i]
+    }))
+  };
+
+  const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name.trim().replace(/\s+/g, '-') + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+window.loadConfigFromFile = function () {
+  document.getElementById('json-file-input').click();
+};
+
+window.onJSONFileSelected = function (event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    try {
+      const config = JSON.parse(e.target.result);
+
+      // Restore speed & happiness
+      if (config.speed !== undefined) {
+        speedSlider.value(config.speed);
+        bmw.setSpeed(config.speed);
+        targetSliderSpeed = config.speed;
+      }
+      if (config.happiness !== undefined) {
+        happinessSlider.value(config.happiness);
+        bmw.setWalkerParam(undefined, undefined, undefined, config.happiness);
+        targetSliderHappiness = config.happiness;
+      }
+
+      // Restore all joint settings
+      if (config.joints && Array.isArray(config.joints)) {
+        bmw.isConfigLoaded = true;
+
+        let isSitPose = config.name && config.name.toLowerCase().includes('sit');
+
+        if (isSitPose) {
+          let customSit = [];
+          config.joints.forEach(j => {
+            customSit[j.index] = { x: j.absoluteX !== undefined ? j.absoluteX : 0, z: j.absoluteZ !== undefined ? j.absoluteZ : 0 };
+          });
+          bmw.customSitCoords = customSit;
+
+          bmw.setMotionType('sit');
+          const motionSelect = document.getElementById('motionType');
+          if (motionSelect) motionSelect.value = 'sit';
+        } else {
+          config.joints.forEach(joint => {
+            const i = joint.index;
+            if (i < 0 || i >= 20) return;
+
+            const ox = joint.offsetX ?? 0;
+            const oz = joint.offsetZ ?? 0;
+            const amp = joint.amplitude ?? 1.0;
+
+            bmw.setJointOffset(i, ox, undefined, oz);
+            bmw.setJointAmplitude(i, amp);
+
+            // Sync sliders
+            let sx = document.getElementById(`slider-x-${i}`);
+            let sz = document.getElementById(`slider-z-${i}`);
+            let sa = document.getElementById(`slider-a-${i}`);
+            let ex = document.getElementById(`offset-x-${i}`);
+            let ez = document.getElementById(`offset-z-${i}`);
+            let ea = document.getElementById(`offset-a-${i}`);
+
+            if (sx) sx.value = ox;
+            if (sz) sz.value = oz;
+            if (sa) sa.value = amp;
+            if (ex) ex.innerText = (ox >= 0 ? "+" : "") + ox.toFixed(1);
+            if (ez) ez.innerText = (oz >= 0 ? "+" : "") + oz.toFixed(1);
+            if (ea) ea.innerText = amp.toFixed(2) + "×";
+          });
+        }
+      }
+
+      alert(`Loaded "${config.name || file.name}" successfully!`);
+    } catch (err) {
+      alert("Failed to load config: " + err.message);
+    }
+    // Reset the input so the same file can be re-loaded
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+};
+
+class PeeParticle {
+  constructor(x, y, img) {
+    this.x = x;
+    this.y = y;
+    this.img = img;
+    this.vx = random(-0.5, 0.5);
+    this.vy = random(2, 5);
+    this.angle = random(TWO_PI);
+    this.vAngle = random(-0.15, 0.15);
+    this.size = 20;
+    this.opacity = 255;
+  }
+
+  update() {
+    // Apply gravity
+    this.vy += 0.25;
+
+    // Apply simple air drag
+    this.vx *= 0.99;
+    this.vy *= 0.99;
+
+    // Move
+    this.x += this.vx;
+    this.y += this.vy;
+    this.angle += this.vAngle;
+  }
+
+  draw() {
+    push();
+    translate(this.x, this.y);
+    rotate(this.angle);
+    imageMode(CENTER);
+
+    // Set tint for opacity
+    tint(255, this.opacity);
+
+    let imgAspectRatio = this.img.width / this.img.height;
+    let imgW = this.size * imgAspectRatio;
+    let imgH = this.size;
+    image(this.img, 0, 0, imgW, imgH);
+    pop();
+  }
+}
+
+function updateAndDrawPeeParticles(markers) {
+  let floorY = height / 2;
+
+  // Spawn particles when peeing and release is enabled
+  if (bmw && bmw.motionType === 'pee' && bmw.peeProgress > 0.8 && releasePeeParticles) {
+    if (frameCount % 2 === 0) {
+      let pelvis = markers[8];
+      if (pelvis) {
+        let randomImg;
+        if (currentImagesMode !== 'logo' && (activeEmotionImg1 || activeEmotionImg2 || activeEmotionImg3 || activeEmotionImg4)) {
+          let choices = [];
+          if (activeEmotionImg1) choices.push(activeEmotionImg1);
+          if (activeEmotionImg2) choices.push(activeEmotionImg2);
+          if (activeEmotionImg3) choices.push(activeEmotionImg3);
+          if (activeEmotionImg4) choices.push(activeEmotionImg4);
+          randomImg = choices[Math.floor(random(choices.length))];
+        } else {
+          randomImg = logoImages[Math.floor(random(logoImages.length))];
+        }
+        peeParticles.push(new PeeParticle(pelvis.x, pelvis.y, randomImg));
+      }
+    }
+  }
+
+  // Update physics for all particles
+  for (let p of peeParticles) {
+    p.update();
+  }
+
+  // Resolve circle-circle collisions (liquid-like push apart)
+  let diameter = 17; // collision clearance (particles are 20px)
+  for (let i = 0; i < peeParticles.length; i++) {
+    let pA = peeParticles[i];
+    for (let j = i + 1; j < peeParticles.length; j++) {
+      let pB = peeParticles[j];
+
+      let dx = pA.x - pB.x;
+      let dy = pA.y - pB.y;
+      let distSq = dx * dx + dy * dy;
+      if (distSq < diameter * diameter) {
+        let d = Math.sqrt(distSq);
+        if (d === 0) {
+          pA.x += random(-1, 1);
+          pA.y += random(-1, 1);
+          continue;
+        }
+
+        let overlap = diameter - d;
+        let pushX = (dx / d) * overlap * 0.5;
+        let pushY = (dy / d) * overlap * 0.5;
+
+        pA.x += pushX;
+        pA.y += pushY;
+        pB.x -= pushX;
+        pB.y -= pushY;
+
+        // Add a bit of horizontal flow when particles press against each other
+        let flowFactor = 0.08;
+        pA.vx += pushX * flowFactor;
+        pA.vy += pushY * flowFactor;
+        pB.vx -= pushX * flowFactor;
+        pB.vy -= pushY * flowFactor;
+      }
+    }
+  }
+
+  // Constrain all particles to floor (bottom of canvas)
+  for (let p of peeParticles) {
+    let bottomLimit = floorY - p.size / 2;
+    if (p.y >= bottomLimit) {
+      p.y = bottomLimit;
+      p.vy = 0;
+      p.vx *= 0.85; // floor friction
+      p.vAngle *= 0.9; // spin friction
+    }
+  }
+
+  // If not peeing, fade out all particles
+  if (bmw && bmw.motionType !== 'pee') {
+    for (let p of peeParticles) {
+      p.opacity -= 4; // Fade out
+    }
+    // Remove faded out particles
+    peeParticles = peeParticles.filter(p => p.opacity > 0);
+  }
+
+  // Cap total particles at 350 to maintain performance
+  if (peeParticles.length > 350) {
+    peeParticles.shift(); // Remove the oldest particle
+  }
+
+  // Draw all particles
+  for (let p of peeParticles) {
+    p.draw();
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}

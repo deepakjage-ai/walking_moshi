@@ -1,0 +1,188 @@
+{
+  "name": "sniff",
+  "savedAt": "2026-08-25T22:48:51.107Z",
+  "speed": 0.5,
+  "happiness": 2,
+  "joints": [
+    {
+      "index": 0,
+      "name": "L-Paw-Front",
+      "offsetX": -33,
+      "offsetZ": -4,
+      "absoluteX": 148.759,
+      "absoluteZ": -148.676,
+      "amplitude": 1
+    },
+    {
+      "index": 1,
+      "name": "L-Elbow-Front",
+      "offsetX": -33,
+      "offsetZ": -4,
+      "absoluteX": 128.291,
+      "absoluteZ": -117.69,
+      "amplitude": 1
+    },
+    {
+      "index": 2,
+      "name": "L-Shoulder",
+      "offsetX": 12,
+      "offsetZ": 0,
+      "absoluteX": 110.704,
+      "absoluteZ": -70.842,
+      "amplitude": 1
+    },
+    {
+      "index": 3,
+      "name": "Neck",
+      "offsetX": 72,
+      "offsetZ": -74,
+      "absoluteX": 208.515,
+      "absoluteZ": -6.611,
+      "amplitude": 1
+    },
+    {
+      "index": 4,
+      "name": "Chest",
+      "offsetX": 72,
+      "offsetZ": 1,
+      "absoluteX": 179.561,
+      "absoluteZ": 50.863,
+      "amplitude": 1
+    },
+    {
+      "index": 5,
+      "name": "L-Paw-Back",
+      "offsetX": -51,
+      "offsetZ": 8,
+      "absoluteX": -86.185,
+      "absoluteZ": -144.397,
+      "amplitude": 1
+    },
+    {
+      "index": 6,
+      "name": "L-Knee-Back",
+      "offsetX": -57,
+      "offsetZ": 5,
+      "absoluteX": -129.016,
+      "absoluteZ": -96.025,
+      "amplitude": 1
+    },
+    {
+      "index": 7,
+      "name": "L-Hip",
+      "offsetX": -45,
+      "offsetZ": 17,
+      "absoluteX": -88.368,
+      "absoluteZ": -14.126,
+      "amplitude": 1
+    },
+    {
+      "index": 8,
+      "name": "Pelvis",
+      "offsetX": -44,
+      "offsetZ": 63,
+      "absoluteX": -130.2,
+      "absoluteZ": 98.284,
+      "amplitude": 1
+    },
+    {
+      "index": 9,
+      "name": "Head",
+      "offsetX": -17,
+      "offsetZ": -71,
+      "absoluteX": 267.871,
+      "absoluteZ": -66.316,
+      "amplitude": 1
+    },
+    {
+      "index": 10,
+      "name": "Belly",
+      "offsetX": 6,
+      "offsetZ": 72,
+      "absoluteX": 9.483,
+      "absoluteZ": 96.166,
+      "amplitude": 1
+    },
+    {
+      "index": 11,
+      "name": "Tail",
+      "offsetX": -26,
+      "offsetZ": -17,
+      "absoluteX": -177.319,
+      "absoluteZ": 102.103,
+      "amplitude": 1
+    },
+    {
+      "index": 12,
+      "name": "R-Paw-Front",
+      "offsetX": 51,
+      "offsetZ": 3,
+      "absoluteX": 70.567,
+      "absoluteZ": -147.689,
+      "amplitude": 1
+    },
+    {
+      "index": 13,
+      "name": "R-Elbow-Front",
+      "offsetX": 40,
+      "offsetZ": -12,
+      "absoluteX": 55.231,
+      "absoluteZ": -117.135,
+      "amplitude": 1
+    },
+    {
+      "index": 14,
+      "name": "R-Shoulder",
+      "offsetX": 26,
+      "offsetZ": 3,
+      "absoluteX": 59.834,
+      "absoluteZ": -41.82,
+      "amplitude": 1
+    },
+    {
+      "index": 15,
+      "name": "R-Paw-Back",
+      "offsetX": 23,
+      "offsetZ": -8,
+      "absoluteX": -163.047,
+      "absoluteZ": -151.297,
+      "amplitude": 1
+    },
+    {
+      "index": 16,
+      "name": "R-Knee-Back",
+      "offsetX": -19,
+      "offsetZ": -62,
+      "absoluteX": -180.586,
+      "absoluteZ": -109.867,
+      "amplitude": 1
+    },
+    {
+      "index": 17,
+      "name": "R-Hip",
+      "offsetX": -40,
+      "offsetZ": -13,
+      "absoluteX": -135.854,
+      "absoluteZ": -43.436,
+      "amplitude": 1
+    },
+    {
+      "index": 18,
+      "name": "Tail-Mid",
+      "offsetX": -43,
+      "offsetZ": -10,
+      "absoluteX": -224.984,
+      "absoluteZ": 123.756,
+      "amplitude": 1
+    },
+    {
+      "index": 19,
+      "name": "Tail-End",
+      "offsetX": -56,
+      "offsetZ": 23,
+      "absoluteX": -257.023,
+      "absoluteZ": 176.085,
+      "amplitude": 1
+    }
+  ]
+}
