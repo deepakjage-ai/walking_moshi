@@ -18,18 +18,7 @@
   <div id="canvas-container"></div>
 
   <div id="ui-controls" style="position: absolute; left: 20px; top: 150px; display: flex; flex-direction: column; gap: 12px; z-index: 100;">
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <input type="checkbox" id="toggle-skeleton" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: #6366f1;">
-      <label for="toggle-skeleton" style="font-size: 13px; font-weight: 500; color: #d1d1d6; cursor: pointer; user-select: none;">Show skeleton lines & dots</label>
-    </div>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <input type="checkbox" id="toggle-rotate-images" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: #6366f1;">
-      <label for="toggle-rotate-images" style="font-size: 13px; font-weight: 500; color: #d1d1d6; cursor: pointer; user-select: none;">Align images with bones direction</label>
-    </div>
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <input type="checkbox" id="toggle-show-images" checked style="cursor: pointer; width: 16px; height: 16px; accent-color: #6366f1;">
-      <label for="toggle-show-images" style="font-size: 13px; font-weight: 500; color: #d1d1d6; cursor: pointer; user-select: none;">Show bone logo images</label>
-    </div>
+
     <div style="display: flex; align-items: center; gap: 10px;">
       <label for="motion-type-select" style="font-size: 13px; font-weight: 600; color: #e2e2e9;">Motion:</label>
       <select id="motion-type-select" onchange="onMotionTypeChange(this.value)" style="background: rgba(255,255,255,0.1); color: white; border: none; padding: 4px 8px; border-radius: 4px; font-family: 'Outfit', sans-serif;">

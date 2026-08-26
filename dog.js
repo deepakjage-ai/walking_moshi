@@ -17,11 +17,9 @@ let letters = ["M", "o", "s", "h", "i", "m", "b", "o"];
 
 let logoImages = [];
 let fixedLogoImages = {};
-let angryImages = [];
-let happyImages = [];
-let sadImages = [];
+let smallImages = [];
 
-let currentImagesMode = 'logo'; // 'logo', 'angry', 'happy', 'sad'
+let currentImagesMode = 'logo'; // 'logo', 'small'
 let activeBone1 = -1;
 let activeBone2 = -1;
 let activeBone3 = -1;
@@ -36,7 +34,9 @@ let lastPositionSwitchTime = 0;
 let peeParticles = [];
 let releasePeeParticles = true;
 let targetSliderSpeed = 1.0;
+let currentSpeed = 1.0;
 let targetSliderHappiness = 0.0;
+let currentHappiness = 3;
 
 let isEating = false;
 let bowlImg;
@@ -80,24 +80,12 @@ function preload() {
   logoImages.push(loadImage('logo/svg/b.svg'));
   logoImages.push(loadImage('logo/svg/o2.svg'));
 
-  let angryFiles = [
-    "angry-0.png", "angry-1.gif", "angry-2.png", "angry-3.png", "angry-4.png",
-    "angry-5.png", "angry-6.png", "angry-7.png", "angry-9.png",
-    "angry-10.png"
+  let smallFiles = [
+    "image0.png", "image1.png", "image2.png", "image3.png", "image4.png",
+    "image5.png", "image6.png", "image7.png", "image8.png",
+    "image9.png", "image10.png", "image11.png", "image12.png"
   ];
-  angryFiles.forEach(f => angryImages.push(loadImage('images_rep/angry/' + f)));
-
-  let happyFiles = [
-    "happy-0.png", "happy-1.png", "happy-2.png", "happy-3.png", "happy-4.png",
-    "happy-5.png", "happy-6.png", "happy-7.png", "happy-8.png", "happy-9.png", "happy-10.gif"
-  ];
-  happyFiles.forEach(f => happyImages.push(loadImage('images_rep/Happy/' + f)));
-
-  let sadFiles = [
-    "sad-0.png", "sad-1.png", "sad-2.png", "sad-3.png", "sad-4.png",
-    "sad-5.png", "sad-6.png", "sad-7.png", "sad-8.png", "sad-9.png", "sad-10.png", "sad-11.png"
-  ];
-  sadFiles.forEach(f => sadImages.push(loadImage('images_rep/sad/' + f)));
+  smallFiles.forEach(f => smallImages.push(loadImage('images_rep/Small/' + f)));
 
   bowlImg = loadImage('bowl.png');
 }
@@ -168,12 +156,9 @@ function setup() {
   // Type 1 is the Dog walk cycle (modified from the original cat walk cycle)
   bmw = new BMWalker(BMW_TYPE_DOG);
 
-  speedSlider = createSlider(-4, 4, 1, 0.1);
-  speedSlider.position(20, 20);
 
-  // Custom happiness slider (controls tail wagging)
-  happinessSlider = createSlider(0, 10, 3, 1);
-  happinessSlider.position(20, 50);
+
+
 
   // Randomize Button
   randomizeButton = createButton('Randomize Images');
@@ -184,42 +169,25 @@ function setup() {
   btnLogo.position(20, 110);
   btnLogo.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('logo'); });
 
-  let btnAngry = createButton('Angry');
-  btnAngry.position(70, 110);
-  btnAngry.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('angry'); });
-
-  let btnHappy = createButton('Happy');
-  btnHappy.position(130, 110);
-  btnHappy.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('happy'); });
-
-  let btnSad = createButton('Sad');
-  btnSad.position(190, 110);
-  btnSad.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('sad'); });
+  let btnSmall = createButton('Images');
+  btnSmall.position(70, 110);
+  btnSmall.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('small'); });
 
   // Initialize the Sidebar Control Panel UI
 
 }
 
 function draw() {
-  // Update targets if user is dragging happiness slider manually
-  if (mouseIsPressed && mouseX > 20 && mouseX < 170 && mouseY > 40 && mouseY < 75) {
-    targetSliderHappiness = happinessSlider.value();
+  // Interpolate currentSpeed towards targetSliderSpeed
+  let speedStep = 0.05;
+  if (Math.abs(currentSpeed - targetSliderSpeed) < speedStep) {
+    currentSpeed = targetSliderSpeed;
   } else {
-    // Interpolate towards target gradually
-    if (happinessSlider && happinessSlider.value() !== targetSliderHappiness) {
-      let current = happinessSlider.value();
-      let step = 0.125; // Transition step for happiness
-      if (Math.abs(current - targetSliderHappiness) < step) {
-        happinessSlider.value(targetSliderHappiness);
-      } else {
-        happinessSlider.value(current + Math.sign(targetSliderHappiness - current) * step);
-      }
-    }
+    currentSpeed += Math.sign(targetSliderSpeed - currentSpeed) * speedStep;
   }
 
-  // Always force speed slider to reflect the walker's actual internal speed
-  if (speedSlider) {
-    speedSlider.value(bmw.speed);
+  if (bmw.speed !== currentSpeed) {
+    bmw.setSpeed(currentSpeed);
   }
 
   background(0);
@@ -229,20 +197,27 @@ function draw() {
   noStroke();
   textSize(16);
   textAlign(LEFT, CENTER);
-  text(`Speed: ${speedSlider.value().toFixed(1)}x`, 180, 30);
-  text(`Happiness (Tail Wag): ${happinessSlider.value()}`, 180, 60);
+
+
 
   // Move origin to center so walker is visible
   translate(width / 2, height / 2);
   // Update background scroll
-  if (currentMotionType === 'walk') {
-    bgScrollX += walkingSpeed;
-  } else if (currentMotionType === 'run') {
-    bgScrollX += runningSpeed;
-  } else if (currentMotionType === 'sniff') {
+  if (currentMotionType === 'sniff') {
+    // In sniff mode, snap to the nearest full background cycle
     let loopWidth = Math.max(2400, width + 400);
     let targetScroll = Math.ceil(bgScrollX / loopWidth) * loopWidth;
     bgScrollX = lerp(bgScrollX, targetScroll, 0.05);
+  } else {
+    // For all other modes, scale the scroll speed directly to the dog's animated speed
+    // currentSpeed smoothly transitions between 0.0 (stop), 1.0 (walk), and 2.0 (run)
+    let bgSpeed = 0;
+    if (currentSpeed <= 1.0) {
+      bgSpeed = lerp(0, walkingSpeed, currentSpeed); // 0 to 1 interpolates stop to walk
+    } else {
+      bgSpeed = lerp(walkingSpeed, runningSpeed, currentSpeed - 1.0); // 1 to 2 interpolates walk to run
+    }
+    bgScrollX += bgSpeed;
   }
 
   let loopWidth = Math.max(2400, width + 400);
@@ -251,7 +226,7 @@ function draw() {
     if (!img) return;
     let screenX = ((baseX - bgScrollX) % loopWidth + loopWidth) % loopWidth;
     if (screenX > loopWidth / 2) screenX -= loopWidth;
-    
+
     image(img, screenX, y, w, h);
   }
 
@@ -275,17 +250,17 @@ function draw() {
     if (ufo.state === 'hidden') {
       if (now - ufo.stateStartTime > 5000) {
         // Prepare to enter
-        ufo.endX = random(-width/2 + 100, width/2 - 100);
-        ufo.endY = random(-height/2 + 50, -height/2 + height * 0.3); // Top 30%
-        
+        ufo.endX = random(-width / 2 + 100, width / 2 - 100);
+        ufo.endY = random(-height / 2 + 50, -height / 2 + height * 0.3); // Top 30%
+
         let fromRight = random(1) > 0.5;
-        ufo.startX = fromRight ? width/2 + 200 : -width/2 - 200;
-        ufo.startY = random(-height/2, -height/2 + height * 0.3);
-        
+        ufo.startX = fromRight ? width / 2 + 200 : -width / 2 - 200;
+        ufo.startY = random(-height / 2, -height / 2 + height * 0.3);
+
         // Control point for a curve
         ufo.ctrlX = (ufo.startX + ufo.endX) / 2;
-        ufo.ctrlY = Math.min(ufo.startY, ufo.endY) - 400; 
-        
+        ufo.ctrlY = Math.min(ufo.startY, ufo.endY) - 400;
+
         ufo.state = 'entering';
         ufo.stateStartTime = now;
       }
@@ -320,14 +295,14 @@ function draw() {
       if (now - ufo.stateStartTime > 500) {
         ufo.startX = ufo.x;
         ufo.startY = ufo.y;
-        
+
         let toRight = random(1) > 0.5;
-        ufo.endX = toRight ? width/2 + 200 : -width/2 - 200;
-        ufo.endY = random(-height/2, -height/2 + height * 0.3);
-        
+        ufo.endX = toRight ? width / 2 + 200 : -width / 2 - 200;
+        ufo.endY = random(-height / 2, -height / 2 + height * 0.3);
+
         ufo.ctrlX = (ufo.startX + ufo.endX) / 2;
         ufo.ctrlY = Math.min(ufo.startY, ufo.endY) - 400;
-        
+
         ufo.state = 'leaving';
         ufo.stateStartTime = now;
       } else {
@@ -390,13 +365,19 @@ function draw() {
   updateAndDrawPeeParticles(markers);
 
   // Update happiness parameter of the walker dynamically
-  let targetHappiness = happinessSlider.value();
-  if (bmw.happiness !== targetHappiness) {
-    bmw.setWalkerParam(undefined, undefined, undefined, targetHappiness);
+  let step = 0.125;
+  if (Math.abs(currentHappiness - targetSliderHappiness) < step) {
+    currentHappiness = targetSliderHappiness;
+  } else {
+    currentHappiness += Math.sign(targetSliderHappiness - currentHappiness) * step;
+  }
+
+  if (bmw.happiness !== currentHappiness) {
+    bmw.setWalkerParam(undefined, undefined, undefined, currentHappiness);
   }
 
   // Check if skeleton toggle is checked
-  let showSkeleton = true;
+  let showSkeleton = false;
   let toggleSkeleton = document.getElementById('toggle-skeleton');
   if (toggleSkeleton) {
     showSkeleton = toggleSkeleton.checked;
@@ -432,9 +413,7 @@ function draw() {
   // Handle special image modes: images change every 3s, positions change every 1s
   if (currentImagesMode !== 'logo') {
     let sourceArray = [];
-    if (currentImagesMode === 'angry') sourceArray = angryImages;
-    else if (currentImagesMode === 'happy') sourceArray = happyImages;
-    else if (currentImagesMode === 'sad') sourceArray = sadImages;
+    if (currentImagesMode === 'small') sourceArray = smallImages;
 
     if (sourceArray.length > 0) {
       let currentTime = millis();
@@ -639,7 +618,12 @@ window.onMotionTypeChange = function (type) {
     targetSliderHappiness = 5.0;
   } else if (type === 'run') {
     targetSliderSpeed = 2.0;
-  } else if (type === 'eat' || type === 'sniff') {
+  } else if (type === 'eat') {
+    targetSliderSpeed = 0.0;
+  } else if (type === 'sniff') {
+    targetSliderSpeed = 0.0;
+    targetSliderHappiness = 1.0;
+  } else if (type === 'sit' || type === 'pee' || type === 'bite') {
     targetSliderSpeed = 0.0;
   }
 
@@ -713,8 +697,8 @@ window.saveConfigToJSON = function () {
   const config = {
     name: name.trim(),
     savedAt: new Date().toISOString(),
-    speed: speedSlider.value(),
-    happiness: happinessSlider.value(),
+    speed: currentSpeed,
+    happiness: currentHappiness,
     joints: dogJointNames.map((jointName, i) => ({
       index: i,
       name: jointName,
@@ -748,12 +732,12 @@ window.onJSONFileSelected = function (event) {
 
       // Restore speed & happiness
       if (config.speed !== undefined) {
-        speedSlider.value(config.speed);
+        currentSpeed = config.speed;
         bmw.setSpeed(config.speed);
         targetSliderSpeed = config.speed;
       }
       if (config.happiness !== undefined) {
-        happinessSlider.value(config.happiness);
+        currentHappiness = config.happiness;
         bmw.setWalkerParam(undefined, undefined, undefined, config.happiness);
         targetSliderHappiness = config.happiness;
       }
@@ -823,7 +807,7 @@ class PeeParticle {
     this.vy = random(2, 5);
     this.angle = random(TWO_PI);
     this.vAngle = random(-0.15, 0.15);
-    this.size = 20;
+    this.size = random(10, 50); // Randomize size between 10 and 35
     this.opacity = 255;
   }
 
@@ -866,17 +850,11 @@ function updateAndDrawPeeParticles(markers) {
     if (frameCount % 2 === 0) {
       let pelvis = markers[8];
       if (pelvis) {
-        let randomImg;
-        if (currentImagesMode !== 'logo' && (activeEmotionImg1 || activeEmotionImg2 || activeEmotionImg3 || activeEmotionImg4)) {
-          let choices = [];
-          if (activeEmotionImg1) choices.push(activeEmotionImg1);
-          if (activeEmotionImg2) choices.push(activeEmotionImg2);
-          if (activeEmotionImg3) choices.push(activeEmotionImg3);
-          if (activeEmotionImg4) choices.push(activeEmotionImg4);
-          randomImg = choices[Math.floor(random(choices.length))];
-        } else {
-          randomImg = logoImages[Math.floor(random(logoImages.length))];
+        let choices = [...logoImages];
+        if (smallImages && smallImages.length > 0) {
+          choices = choices.concat(smallImages);
         }
+        let randomImg = choices[Math.floor(random(choices.length))];
         peeParticles.push(new PeeParticle(pelvis.x, pelvis.y, randomImg));
       }
     }
@@ -888,16 +866,18 @@ function updateAndDrawPeeParticles(markers) {
   }
 
   // Resolve circle-circle collisions (liquid-like push apart)
-  let diameter = 17; // collision clearance (particles are 20px)
   for (let i = 0; i < peeParticles.length; i++) {
     let pA = peeParticles[i];
     for (let j = i + 1; j < peeParticles.length; j++) {
       let pB = peeParticles[j];
 
+      // Calculate dynamic clearance based on their sizes (roughly 85% of their combined radii)
+      let clearance = ((pA.size + pB.size) / 2) * 0.85;
+
       let dx = pA.x - pB.x;
       let dy = pA.y - pB.y;
       let distSq = dx * dx + dy * dy;
-      if (distSq < diameter * diameter) {
+      if (distSq < clearance * clearance) {
         let d = Math.sqrt(distSq);
         if (d === 0) {
           pA.x += random(-1, 1);
@@ -905,7 +885,7 @@ function updateAndDrawPeeParticles(markers) {
           continue;
         }
 
-        let overlap = diameter - d;
+        let overlap = clearance - d;
         let pushX = (dx / d) * overlap * 0.5;
         let pushY = (dy / d) * overlap * 0.5;
 
@@ -935,8 +915,8 @@ function updateAndDrawPeeParticles(markers) {
     }
   }
 
-  // If not peeing, fade out all particles
-  if (bmw && bmw.motionType !== 'pee') {
+  // If not actively releasing particles, fade out all particles
+  if (bmw && (bmw.motionType !== 'pee' || !releasePeeParticles)) {
     for (let p of peeParticles) {
       p.opacity -= 4; // Fade out
     }
@@ -944,8 +924,8 @@ function updateAndDrawPeeParticles(markers) {
     peeParticles = peeParticles.filter(p => p.opacity > 0);
   }
 
-  // Cap total particles at 350 to maintain performance
-  if (peeParticles.length > 350) {
+  // Cap total particles at 150 to maintain performance
+  if (peeParticles.length > 150) {
     peeParticles.shift(); // Remove the oldest particle
   }
 
