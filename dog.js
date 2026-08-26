@@ -405,7 +405,7 @@ function draw() {
 
     bowlX = lerp(bowlX, targetBowlX, 0.1);
   } else {
-    let offScreenX = (width / 2) / (isMobile ? 0.7 : 1.0) + 100;
+    let offScreenX = (width / 2) / (isMobile ? 0.7 : 1.0) - cameraOffsetX + 100;
     targetBowlX = offScreenX;
     if (bowlX < targetBowlX - 5) {
       bowlX = lerp(bowlX, targetBowlX, 0.1);
@@ -414,7 +414,7 @@ function draw() {
     }
   }
 
-  let clipX = (width / 2) / (isMobile ? 0.7 : 1.0) + 90;
+  let clipX = (width / 2) / (isMobile ? 0.7 : 1.0) - cameraOffsetX + 90;
   if (bowlX < clipX && bowlImg) {
     push();
     imageMode(CENTER);
