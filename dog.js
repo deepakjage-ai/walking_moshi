@@ -39,6 +39,15 @@ let targetSliderHappiness = 0.0;
 let currentHappiness = 3;
 
 let isEating = false;
+let cameraOffsetX = 0;
+
+// Configurable camera offsets for different modes to easily fine-tune framing
+let cameraOffsetEat = -50;
+let cameraOffsetSniff = -230;
+let cameraOffsetPee = -30;
+let cameraOffsetSit = -30;
+let cameraOffsetBite = 0;
+
 let bowlImg;
 let bowlX = 2000; // start off-screen right
 let targetBowlX = 2000;
@@ -87,7 +96,7 @@ function preload() {
   ];
   smallFiles.forEach(f => smallImages.push(loadImage('images_rep/Small/' + f)));
 
-  bowlImg = loadImage('bowl.png');
+  bowlImg = loadImage('bowlmain.png');
 }
 
 // 1. Custom Joint Index Names (since Dog type in the library doesn't have default names)
@@ -200,8 +209,47 @@ function draw() {
 
 
 
+  // Mobile layout state
+  let isMobile = windowWidth <= 768;
+  window.isMobileMode = isMobile;
+
+  // Dynamically hide/disable the bite option on mobile (since mouse tracking is tricky on touch)
+  let biteOption = document.querySelector('option[value="bite"]');
+  if (biteOption) {
+    biteOption.hidden = isMobile;
+    biteOption.disabled = isMobile;
+    if (isMobile && currentMotionType === 'bite') {
+      onMotionTypeChange('walk');
+      let selectEl = document.getElementById('motion-type-select');
+      if (selectEl) selectEl.value = 'walk';
+    }
+  }
+
   // Move origin to center so walker is visible
   translate(width / 2, height / 2);
+  if (isMobile) {
+    scale(0.7); // Global dog & particle reduction
+  }
+
+  // Smoothly pan camera to configured offsets based on active mode (Mobile Only)
+  let targetCameraOffsetX = 0;
+  if (isMobile) {
+    if (isEating) {
+      targetCameraOffsetX = cameraOffsetEat;
+    } else if (currentMotionType === 'sniff') {
+      targetCameraOffsetX = cameraOffsetSniff;
+    } else if (currentMotionType === 'pee') {
+      targetCameraOffsetX = cameraOffsetPee;
+    } else if (currentMotionType === 'sit') {
+      targetCameraOffsetX = cameraOffsetSit;
+    } else if (currentMotionType === 'bite') {
+      targetCameraOffsetX = cameraOffsetBite;
+    }
+  }
+
+  cameraOffsetX = lerp(cameraOffsetX, targetCameraOffsetX, 0.1);
+
+  translate(cameraOffsetX, 0);
   // Update background scroll
   if (currentMotionType === 'sniff') {
     // In sniff mode, snap to the nearest full background cycle
@@ -233,8 +281,12 @@ function draw() {
   push();
   imageMode(CENTER);
   if (bgTreeImg) {
-    drawWrapped(bgTreeImg, -450, 10, 130, 130);
-    drawWrapped(bgTreeImg, 420, 10, 130, 130);
+    // Left tree in the background
+    let treeL = isMobile ? -250 : -450;
+    // Right tree positioned safely to the right of the dog for sniffing
+    let treeR = 420;
+    drawWrapped(bgTreeImg, treeL, 10, 130, 130);
+    drawWrapped(bgTreeImg, treeR, 10, 130, 130);
   }
   if (bgRainbowImg) {
     drawWrapped(bgRainbowImg, -850, 30, 80, 80);
@@ -250,12 +302,17 @@ function draw() {
     if (ufo.state === 'hidden') {
       if (now - ufo.stateStartTime > 5000) {
         // Prepare to enter
-        ufo.endX = random(-width / 2 + 100, width / 2 - 100);
-        ufo.endY = random(-height / 2 + 50, -height / 2 + height * 0.3); // Top 30%
+        let scaleF = isMobile ? 0.7 : 1.0;
+        let vWidth = width / scaleF;
+        let vHeight = height / scaleF;
+        let uBoundX = vWidth / 2 - (isMobile ? 20 : 100);
+        ufo.endX = random(-uBoundX, uBoundX);
+        ufo.endY = random(-vHeight / 2 + 50, -vHeight / 2 + vHeight * 0.3); // Top 30%
 
         let fromRight = random(1) > 0.5;
-        ufo.startX = fromRight ? width / 2 + 200 : -width / 2 - 200;
-        ufo.startY = random(-height / 2, -height / 2 + height * 0.3);
+        let maxPan = isMobile ? 300 : 0; // Buffer for extreme camera panning
+        ufo.startX = fromRight ? vWidth / 2 + 200 + maxPan : -vWidth / 2 - 200 - maxPan;
+        ufo.startY = random(-vHeight / 2, -vHeight / 2 + vHeight * 0.3);
 
         // Control point for a curve
         ufo.ctrlX = (ufo.startX + ufo.endX) / 2;
@@ -296,9 +353,14 @@ function draw() {
         ufo.startX = ufo.x;
         ufo.startY = ufo.y;
 
+        let scaleF = isMobile ? 0.7 : 1.0;
+        let vWidth = width / scaleF;
+        let vHeight = height / scaleF;
+
         let toRight = random(1) > 0.5;
-        ufo.endX = toRight ? width / 2 + 200 : -width / 2 - 200;
-        ufo.endY = random(-height / 2, -height / 2 + height * 0.3);
+        let maxPan = isMobile ? 300 : 0;
+        ufo.endX = toRight ? vWidth / 2 + 200 + maxPan : -vWidth / 2 - 200 - maxPan;
+        ufo.endY = random(-vHeight / 2, -vHeight / 2 + vHeight * 0.3);
 
         ufo.ctrlX = (ufo.startX + ufo.endX) / 2;
         ufo.ctrlY = Math.min(ufo.startY, ufo.endY) - 400;
@@ -343,7 +405,8 @@ function draw() {
 
     bowlX = lerp(bowlX, targetBowlX, 0.1);
   } else {
-    targetBowlX = width / 2 + 100;
+    let offScreenX = (width / 2) / (isMobile ? 0.7 : 1.0) + 100;
+    targetBowlX = offScreenX;
     if (bowlX < targetBowlX - 5) {
       bowlX = lerp(bowlX, targetBowlX, 0.1);
     } else {
@@ -351,7 +414,8 @@ function draw() {
     }
   }
 
-  if (bowlX < width / 2 + 90 && bowlImg) {
+  let clipX = (width / 2) / (isMobile ? 0.7 : 1.0) + 90;
+  if (bowlX < clipX && bowlImg) {
     push();
     imageMode(CENTER);
     let aspect = bowlImg.width / bowlImg.height;
@@ -843,7 +907,8 @@ class PeeParticle {
 }
 
 function updateAndDrawPeeParticles(markers) {
-  let floorY = height / 2;
+  let isMobile = windowWidth <= 768;
+  let floorY = (height / 2) / (isMobile ? 0.7 : 1.0);
 
   // Spawn particles when peeing and release is enabled
   if (bmw && bmw.motionType === 'pee' && bmw.peeProgress > 0.8 && releasePeeParticles) {

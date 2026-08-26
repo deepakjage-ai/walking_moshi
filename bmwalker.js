@@ -505,14 +505,15 @@ class BMWalker {
       let headMarker = markers[9];
       let neckMarker = markers[3];
       if (headMarker && neckMarker) {
-        let centerX = (headMarker.x + neckMarker.x) / 2;
-        let centerY = (headMarker.y + neckMarker.y) / 2;
+        // Anchor the tip of the snout (end of the 'm') to the cursor
+        let pivotX = headMarker.x;
+        let pivotY = headMarker.y;
 
         let targetX = mx - (window.width || 800) / 2;
         let targetY = my - (window.height || 800) / 2;
 
-        let dx_shift = targetX - centerX;
-        let dy_shift = targetY - centerY;
+        let dx_shift = targetX - pivotX;
+        let dy_shift = targetY - pivotY;
 
         let t = this.biteProgress;
         let easeT = 1 - Math.pow(1 - t, 3);
@@ -529,14 +530,14 @@ class BMWalker {
         let sinA = Math.sin(currentAngle);
 
         for (let k = 0; k < markers.length; k++) {
-          let rx = markers[k].x - centerX;
-          let ry = markers[k].y - centerY;
+          let rx = markers[k].x - pivotX;
+          let ry = markers[k].y - pivotY;
 
           let rotX = rx * cosA - ry * sinA;
           let rotY = rx * sinA + ry * cosA;
 
-          markers[k].x = centerX + rotX + shiftX;
-          markers[k].y = centerY + rotY + shiftY;
+          markers[k].x = pivotX + rotX + shiftX;
+          markers[k].y = pivotY + rotY + shiftY;
         }
       }
     }
@@ -703,11 +704,13 @@ class BMWalker {
         this.targetEatProgress = 0.0;
         this.targetSniffProgress = 0.0;
         this.targetRunProgress = 0.0;
-        // Capture anchor X from the back paws (index 5) if not already sitting
-        if (this.sitProgress === 0.0 && this.markers && this.markers[5] !== undefined) {
-          this.sitAnchorX = this.markers[5];
-          // If transitioning from Eat, shift the whole dog backward to keep the visual center stable
-          if (this.eatProgress > 0.0) this.sitAnchorX -= 60;
+        if (this.sitProgress === 0.0) {
+          if (window.isMobileMode) {
+            this.sitAnchorX = 0.0;
+          } else if (this.markers && this.markers[5] !== undefined) {
+            this.sitAnchorX = this.markers[5];
+            if (this.eatProgress > 0.0) this.sitAnchorX -= 60;
+          }
         }
       } else if (motionType === 'pee') {
         this.targetPeeProgress = 1.0;
@@ -716,11 +719,13 @@ class BMWalker {
         this.targetEatProgress = 0.0;
         this.targetSniffProgress = 0.0;
         this.targetRunProgress = 0.0;
-        // Capture anchor X from the back paws (index 5) if not already peeing
-        if (this.peeProgress === 0.0 && this.markers && this.markers[5] !== undefined) {
-          this.peeAnchorX = this.markers[5];
-          // If transitioning from Eat, shift the whole dog backward to keep the visual center stable
-          if (this.eatProgress > 0.0) this.peeAnchorX -= 60;
+        if (this.peeProgress === 0.0) {
+          if (window.isMobileMode) {
+            this.peeAnchorX = 0.0;
+          } else if (this.markers && this.markers[5] !== undefined) {
+            this.peeAnchorX = this.markers[5];
+            if (this.eatProgress > 0.0) this.peeAnchorX -= 60;
+          }
         }
       } else if (motionType === 'bite') {
         this.targetBiteProgress = 1.0;
@@ -736,9 +741,13 @@ class BMWalker {
         this.targetEatProgress = 0.0;
         this.targetSniffProgress = 1.0;
         this.targetRunProgress = 0.0;
-        if (this.sniffProgress === 0.0 && this.markers && this.markers[5] !== undefined) {
-          this.sniffAnchorX = this.markers[5];
-          if (this.sitProgress > 0.0 || this.peeProgress > 0.0) this.sniffAnchorX += 60;
+        if (this.sniffProgress === 0.0) {
+          if (window.isMobileMode) {
+            this.sniffAnchorX = 0.0;
+          } else if (this.markers && this.markers[5] !== undefined) {
+            this.sniffAnchorX = this.markers[5];
+            if (this.sitProgress > 0.0 || this.peeProgress > 0.0) this.sniffAnchorX += 60;
+          }
         }
       } else if (motionType === 'eat') {
         this.targetSitProgress = 0.0;
@@ -747,11 +756,13 @@ class BMWalker {
         this.targetEatProgress = 1.0;
         this.targetSniffProgress = 0.0;
         this.targetRunProgress = 0.0;
-        // Capture anchor X from the back paws (index 5) if not already eating
-        if (this.eatProgress === 0.0 && this.markers && this.markers[5] !== undefined) {
-          this.eatAnchorX = this.markers[5];
-          // If transitioning from Sit or Pee, shift the whole dog forward to compensate for the backward shift
-          if (this.sitProgress > 0.0 || this.peeProgress > 0.0) this.eatAnchorX += 60;
+        if (this.eatProgress === 0.0) {
+          if (window.isMobileMode) {
+            this.eatAnchorX = 0.0;
+          } else if (this.markers && this.markers[5] !== undefined) {
+            this.eatAnchorX = this.markers[5];
+            if (this.sitProgress > 0.0 || this.peeProgress > 0.0) this.eatAnchorX += 60;
+          }
         }
       } else {
         this.targetSitProgress = 0.0;
