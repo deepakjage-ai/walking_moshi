@@ -42,7 +42,7 @@ let isEating = false;
 let cameraOffsetX = 0;
 
 // Configurable camera offsets for different modes to easily fine-tune framing
-let cameraOffsetEat = -50;
+let cameraOffsetEat = -120;
 let cameraOffsetSniff = -230;
 let cameraOffsetPee = -30;
 let cameraOffsetSit = -30;
