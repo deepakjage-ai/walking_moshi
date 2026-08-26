@@ -187,12 +187,72 @@ function setup() {
 }
 
 function draw() {
-  // Interpolate currentSpeed towards targetSliderSpeed
-  let speedStep = 0.05;
-  if (Math.abs(currentSpeed - targetSliderSpeed) < speedStep) {
-    currentSpeed = targetSliderSpeed;
+  let loopWidth = Math.max(2400, width + 400);
+  let stopModes = ['sniff', 'eat', 'sit', 'pee', 'bite'];
+  let isStopping = stopModes.includes(currentMotionType);
+
+  if (isStopping) {
+    if (currentSpeed === 0) {
+      // We are perfectly locked at a safe zone. DO NOTHING!
+      // This completely prevents the background from ever moving while stopped.
+    } else {
+      let currentWrapped = bgScrollX % loopWidth;
+      let baseLoops = bgScrollX - currentWrapped;
+      
+      // Define exact background scroll positions where no objects overlap the dog
+      let safeSpots;
+      if (currentMotionType === 'sniff') {
+        safeSpots = [0, loopWidth]; // Sniff mode MUST align perfectly with the tree
+      } else {
+        // 120, 1150, 1850 perfectly center the dog in the empty gaps between the trees, rainbow, and mushroom
+        safeSpots = [120, 1150, 1850, loopWidth + 120]; 
+      }
+      
+      // Find the safe spot we are currently approaching. 
+      // The -2.0 tolerance prevents the target from jumping to the next one when we are 1 pixel away!
+      let targetWrapped = safeSpots.find(s => s >= currentWrapped - 2.0);
+      if (targetWrapped === undefined) targetWrapped = loopWidth;
+      
+      let targetScroll = baseLoops + targetWrapped;
+      // Clamp to 0 to completely prevent negative square roots (NaN bugs)
+      let distance = Math.max(0, targetScroll - bgScrollX);
+      
+      let brakingDist = 60.0; // Distance required to gracefully brake to 0
+      
+      if (distance <= brakingDist) {
+        // Smooth kinematic deceleration (v = sqrt(2ad)) to stop exactly on the target
+        currentSpeed = Math.min(currentSpeed, Math.sqrt(distance / brakingDist));
+        if (distance < 0.5) {
+          currentSpeed = 0;
+          bgScrollX = targetScroll; // Snap perfectly to the spot
+        }
+      } else {
+        // Keep walking at full speed until we get close enough to brake
+        currentSpeed = Math.min(1.0, currentSpeed + 0.05);
+      }
+      
+      // Tie background speed perfectly to the dog's leg animation speed
+      let bgSpeed = lerp(0, walkingSpeed, currentSpeed);
+      if (currentSpeed > 0) {
+          bgScrollX += bgSpeed;
+      }
+    }
   } else {
-    currentSpeed += Math.sign(targetSliderSpeed - currentSpeed) * speedStep;
+    // Normal walking / running / user-controlled speed
+    let speedStep = 0.05;
+    if (Math.abs(currentSpeed - targetSliderSpeed) < speedStep) {
+      currentSpeed = targetSliderSpeed;
+    } else {
+      currentSpeed += Math.sign(targetSliderSpeed - currentSpeed) * speedStep;
+    }
+    
+    let bgSpeed = 0;
+    if (currentSpeed <= 1.0) {
+      bgSpeed = lerp(0, walkingSpeed, currentSpeed);
+    } else {
+      bgSpeed = lerp(walkingSpeed, runningSpeed, currentSpeed - 1.0);
+    }
+    bgScrollX += bgSpeed;
   }
 
   if (bmw.speed !== currentSpeed) {
@@ -228,7 +288,7 @@ function draw() {
   // Move origin to center so walker is visible
   translate(width / 2, height / 2);
   if (isMobile) {
-    scale(0.7); // Global dog & particle reduction
+    scale(0.6); // Global dog & particle reduction
   }
 
   // Smoothly pan camera to configured offsets based on active mode (Mobile Only)
@@ -250,30 +310,16 @@ function draw() {
   cameraOffsetX = lerp(cameraOffsetX, targetCameraOffsetX, 0.1);
 
   translate(cameraOffsetX, 0);
-  // Update background scroll
-  if (currentMotionType === 'sniff') {
-    // In sniff mode, snap to the nearest full background cycle
-    let loopWidth = Math.max(2400, width + 400);
-    let targetScroll = Math.ceil(bgScrollX / loopWidth) * loopWidth;
-    bgScrollX = lerp(bgScrollX, targetScroll, 0.05);
-  } else {
-    // For all other modes, scale the scroll speed directly to the dog's animated speed
-    // currentSpeed smoothly transitions between 0.0 (stop), 1.0 (walk), and 2.0 (run)
-    let bgSpeed = 0;
-    if (currentSpeed <= 1.0) {
-      bgSpeed = lerp(0, walkingSpeed, currentSpeed); // 0 to 1 interpolates stop to walk
-    } else {
-      bgSpeed = lerp(walkingSpeed, runningSpeed, currentSpeed - 1.0); // 1 to 2 interpolates walk to run
-    }
-    bgScrollX += bgSpeed;
-  }
-
-  let loopWidth = Math.max(2400, width + 400);
+  // Background scroll is now updated concurrently with currentSpeed kinematics at the top of draw()
+  // to ensure perfect synchronization between the dog's legs and the ground.
+  
+  // (We redefine loopWidth here for the drawWrapped function below)
+  let loopWidthWrap = Math.max(2400, width + 400);
 
   function drawWrapped(img, baseX, y, w, h) {
     if (!img) return;
-    let screenX = ((baseX - bgScrollX) % loopWidth + loopWidth) % loopWidth;
-    if (screenX > loopWidth / 2) screenX -= loopWidth;
+    let screenX = ((baseX - bgScrollX) % loopWidthWrap + loopWidthWrap) % loopWidthWrap;
+    if (screenX > loopWidthWrap / 2) screenX -= loopWidthWrap;
 
     image(img, screenX, y, w, h);
   }
@@ -302,7 +348,7 @@ function draw() {
     if (ufo.state === 'hidden') {
       if (now - ufo.stateStartTime > 5000) {
         // Prepare to enter
-        let scaleF = isMobile ? 0.7 : 1.0;
+        let scaleF = isMobile ? 0.6 : 1.0;
         let vWidth = width / scaleF;
         let vHeight = height / scaleF;
         let uBoundX = vWidth / 2 - (isMobile ? 20 : 100);
@@ -405,7 +451,7 @@ function draw() {
 
     bowlX = lerp(bowlX, targetBowlX, 0.1);
   } else {
-    let offScreenX = (width / 2) / (isMobile ? 0.7 : 1.0) - cameraOffsetX + 100;
+    let offScreenX = (width / 2) / (isMobile ? 0.6 : 1.0) - cameraOffsetX + 100;
     targetBowlX = offScreenX;
     if (bowlX < targetBowlX - 5) {
       bowlX = lerp(bowlX, targetBowlX, 0.1);
@@ -414,7 +460,7 @@ function draw() {
     }
   }
 
-  let clipX = (width / 2) / (isMobile ? 0.7 : 1.0) - cameraOffsetX + 90;
+  let clipX = (width / 2) / (isMobile ? 0.6 : 1.0) - cameraOffsetX + 90;
   if (bowlX < clipX && bowlImg) {
     push();
     imageMode(CENTER);
@@ -867,16 +913,25 @@ class PeeParticle {
     this.x = x;
     this.y = y;
     this.img = img;
-    this.vx = random(-0.5, 0.5);
+    this.startX = x;
+    this.startY = y;
+    this.vx = 0; // All start identically with no horizontal speed
     this.vy = random(2, 5);
     this.angle = random(TWO_PI);
     this.vAngle = random(-0.15, 0.15);
-    this.size = random(10, 50); // Randomize size between 10 and 50
+    this.targetSize = random(10, 50); // Final randomized size
+    this.size = 10; // All particles start uniformly tiny
     this.opacity = 255;
     this.id = Math.random();
   }
 
   update() {
+    // Smoothly grow from initial size (10) to their target randomized size
+    this.size += (this.targetSize - this.size) * 0.05;
+
+    // Randomize horizontal velocity slightly as they fall to create mid-air scatter
+    this.vx += random(-0.02, 0.02);
+
     // Apply gravity
     this.vy += 0.25;
 
@@ -913,7 +968,7 @@ class PeeParticle {
 
 function updateAndDrawPeeParticles(markers) {
   let isMobile = windowWidth <= 768;
-  let floorY = (height / 2) / (isMobile ? 0.7 : 1.0);
+  let floorY = (height / 2) / (isMobile ? 0.6 : 1.0);
 
   // Spawn particles when peeing and release is enabled
   if (bmw && bmw.motionType === 'pee' && bmw.peeProgress > 0.8 && releasePeeParticles) {
@@ -964,6 +1019,10 @@ function updateAndDrawPeeParticles(markers) {
             
             // Fast bounding box check before expensive Math.sqrt
             if (Math.abs(dx) > clearance || Math.abs(dy) > clearance) continue;
+
+            // Prevent the "shower head" scatter: don't collide particles that have just spawned
+            // This guarantees they fall in a perfectly straight line for the first 80 pixels
+            if (pA.y < pA.startY + 80 && pB.y < pB.startY + 80) continue;
 
             let distSq = dx * dx + dy * dy;
             if (distSq < clearance * clearance) {
