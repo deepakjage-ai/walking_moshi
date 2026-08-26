@@ -288,7 +288,7 @@ function draw() {
   // Move origin to center so walker is visible
   translate(width / 2, height / 2);
   if (isMobile) {
-    scale(0.6); // Global dog & particle reduction
+    scale(0.55); // Global dog & particle reduction
   }
 
   // Smoothly pan camera to configured offsets based on active mode (Mobile Only)
@@ -348,7 +348,7 @@ function draw() {
     if (ufo.state === 'hidden') {
       if (now - ufo.stateStartTime > 5000) {
         // Prepare to enter
-        let scaleF = isMobile ? 0.6 : 1.0;
+        let scaleF = isMobile ? 0.55 : 1.0;
         let vWidth = width / scaleF;
         let vHeight = height / scaleF;
         let uBoundX = vWidth / 2 - (isMobile ? 20 : 100);
@@ -451,7 +451,7 @@ function draw() {
 
     bowlX = lerp(bowlX, targetBowlX, 0.1);
   } else {
-    let offScreenX = (width / 2) / (isMobile ? 0.6 : 1.0) - cameraOffsetX + 100;
+    let offScreenX = (width / 2) / (isMobile ? 0.55 : 1.0) - cameraOffsetX + 100;
     targetBowlX = offScreenX;
     if (bowlX < targetBowlX - 5) {
       bowlX = lerp(bowlX, targetBowlX, 0.1);
@@ -460,7 +460,7 @@ function draw() {
     }
   }
 
-  let clipX = (width / 2) / (isMobile ? 0.6 : 1.0) - cameraOffsetX + 90;
+  let clipX = (width / 2) / (isMobile ? 0.55 : 1.0) - cameraOffsetX + 90;
   if (bowlX < clipX && bowlImg) {
     push();
     imageMode(CENTER);
@@ -968,7 +968,7 @@ class PeeParticle {
 
 function updateAndDrawPeeParticles(markers) {
   let isMobile = windowWidth <= 768;
-  let floorY = (height / 2) / (isMobile ? 0.6 : 1.0);
+  let floorY = (height / 2) / (isMobile ? 0.55 : 1.0);
 
   // Spawn particles when peeing and release is enabled
   if (bmw && bmw.motionType === 'pee' && bmw.peeProgress > 0.8 && releasePeeParticles) {
