@@ -870,7 +870,7 @@ class BMWalker {
     // Dynamic Tail Wag using walkertime and scaled by happiness
     let h = Math.max(0.15, this.happiness / 10.0); // minimum wag factor of 0.15
     if (h !== 0) {
-      let t = walkertime;
+      let t = this.tm.getTimer() / 1000.0;
       // Increased tail segment lengths for a longer tail
       let L1 = 26.0;
       let L2 = 45.0;
@@ -879,9 +879,9 @@ class BMWalker {
       let pelvisX = sitMarkers[8];
       let pelvisZ = sitMarkers[8 + this.nummarkers * 2];
 
-      let theta1 = 135.0 * Math.PI / 180.0 + h * 45.0 * Math.PI / 180.0 * (1.0 - Math.cos(2.0 * t - 0.0));
-      let theta2 = 98.13 * Math.PI / 180.0 + h * 81.93 * Math.PI / 180.0 * (1.0 - Math.cos(2.0 * t - 1.0));
-      let theta3 = 50.19 * Math.PI / 180.0 + h * 129.9 * Math.PI / 180.0 * (1.0 - Math.cos(2.0 * t - 2.0));
+      let theta1 = 135.0 * Math.PI / 180.0 + h * 45.0 * Math.PI / 180.0 * (1.0 - Math.cos(5.0 * t - 0.0));
+      let theta2 = 98.13 * Math.PI / 180.0 + h * 81.93 * Math.PI / 180.0 * (1.0 - Math.cos(5.0 * t - 1.0));
+      let theta3 = 50.19 * Math.PI / 180.0 + h * 129.9 * Math.PI / 180.0 * (1.0 - Math.cos(5.0 * t - 2.0));
 
       let tail1X = pelvisX + L1 * Math.cos(theta1);
       let tail1Z = pelvisZ + L1 * Math.sin(theta1);
@@ -1698,13 +1698,13 @@ class BMWalker {
           return 1.0 + offset;
         }
 
-        let t = walkertime;
+        let t = this.tm.getTimer() / 1000.0;
         let h = this.happiness / 10.0; // scaled happiness factor
 
         // Base angles for Extreme 1 (upward curve) in radians
-        let theta1 = 135.0 * Math.PI / 180.0 + h * 45.0 * Math.PI / 180.0 * (1.0 - Math.cos(2.0 * t - 0.0));
-        let theta2 = 98.13 * Math.PI / 180.0 + h * 81.93 * Math.PI / 180.0 * (1.0 - Math.cos(2.0 * t - 1.0));
-        let theta3 = 50.19 * Math.PI / 180.0 + h * 129.9 * Math.PI / 180.0 * (1.0 - Math.cos(2.0 * t - 2.0));
+        let theta1 = 135.0 * Math.PI / 180.0 + h * 45.0 * Math.PI / 180.0 * (1.0 - Math.cos(2.3 * t - 0.0));
+        let theta2 = 98.13 * Math.PI / 180.0 + h * 81.93 * Math.PI / 180.0 * (1.0 - Math.cos(2.3 * t - 1.0));
+        let theta3 = 50.19 * Math.PI / 180.0 + h * 129.9 * Math.PI / 180.0 * (1.0 - Math.cos(2.3 * t - 2.0));
 
         // Head bobbing logic (constant length to prevent expanding/contracting)
         let thetaHead = 0.15 + 0.15 * Math.sin(t); // Positive angle points slightly up, with a bobbing motion
@@ -2899,8 +2899,8 @@ let peeParticles = [];
 let releasePeeParticles = true;
 let targetSliderSpeed = 0.75;
 let currentSpeed = 1.0;
-let targetSliderHappiness = 0.0;
-let currentHappiness = 3;
+let targetSliderHappiness = 5.0;
+let currentHappiness = 5.0;
 
 let isEating = false;
 let cameraOffsetX = 0;
