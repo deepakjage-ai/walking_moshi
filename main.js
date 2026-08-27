@@ -3077,20 +3077,7 @@ function setup() {
 
 
 
-  // Randomize Button
-  randomizeButton = createButton('Randomize Images');
-  randomizeButton.position(20, 80);
-  randomizeButton.mousePressed(shuffleImages);
-
-  let btnLogo = createButton('Logo');
-  btnLogo.position(20, 110);
-  btnLogo.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('logo'); });
-
-  let btnSmall = createButton('Images');
-  btnSmall.position(70, 110);
-  btnSmall.mousePressed(() => { if (window.setImagesMode) window.setImagesMode('small'); });
-
-  // Initialize the Sidebar Control Panel UI
+  // UI is now fully handled by Webflow custom elements
 
 }
 
