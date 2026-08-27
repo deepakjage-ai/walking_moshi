@@ -2902,6 +2902,11 @@ let cameraOffsetPee = -30;
 let cameraOffsetSit = -30;
 let cameraOffsetBite = 0;
 
+// Configurable Custom Cursor Variables
+let customCursorSize = 100;         // Size of the custom cursor (width and height in pixels)
+let customCursorHotspotLeft = 18;   // Click registration offset from Left in pixels
+let customCursorHotspotTop = 10;    // Click registration offset from Top in pixels
+
 let bowlImg;
 let bowlX = 2000; // start off-screen right
 let targetBowlX = 2000;
@@ -3029,7 +3034,7 @@ function setupWebflowUI() {
     'eat-btn': 'eat',
     'bite-btn': 'bite'
   };
-  
+
   for (const [id, motion] of Object.entries(buttons)) {
     const btn = document.getElementById(id);
     if (btn) {
@@ -3037,8 +3042,8 @@ function setupWebflowUI() {
         window.onMotionTypeChange(motion);
         // Active state
         for (const otherId of Object.keys(buttons)) {
-           let otherBtn = document.getElementById(otherId);
-           if (otherBtn) otherBtn.classList.remove('selected');
+          let otherBtn = document.getElementById(otherId);
+          if (otherBtn) otherBtn.classList.remove('selected');
         }
         btn.classList.add('selected');
       });
@@ -3049,7 +3054,10 @@ function setupWebflowUI() {
   if (funBtn) {
     funBtn.addEventListener('click', () => {
       window.setImagesMode && window.setImagesMode(currentImagesMode === 'logo' ? 'small' : 'logo');
-      funBtn.classList.toggle('selected');
+      const ticker = funBtn.querySelector('.ticker');
+      if (ticker) {
+        ticker.classList.toggle('selected');
+      }
     });
   }
 }
@@ -3067,16 +3075,63 @@ function setup() {
 
 
 
-  // UI is now fully handled by Webflow custom elements
-
+  // Setup complete
 }
+
+// High-Performance Smooth Custom Hand Cursor
+(function initCustomCursor() {
+  const cursorImg = document.createElement('img');
+  cursorImg.id = 'moshimbo-custom-cursor';
+  cursorImg.src = 'https://cdn.prod.website-files.com/682599915e115cb1f3b11952/6a90156b525735221ff62e99_hands%20copy.png';
+  cursorImg.style.cssText = `
+    position: fixed !important;
+    top: 0px !important;
+    left: 0px !important;
+    height: ${customCursorSize}px !important;
+    width: ${customCursorSize}px !important;
+    max-width: none !important;
+    max-height: none !important;
+    object-fit: contain !important;
+    pointer-events: none !important;
+    z-index: 2147483647 !important;
+    display: block !important;
+    transform: translate3d(-1000px, -1000px, 0);
+    will-change: transform;
+    user-select: none !important;
+    -webkit-user-drag: none !important;
+  `;
+
+  function mount() {
+    if (document.body && !document.body.contains(cursorImg)) {
+      document.body.appendChild(cursorImg);
+    }
+  }
+  if (document.body) mount();
+  else document.addEventListener('DOMContentLoaded', mount);
+
+  const hideStyle = document.createElement('style');
+  hideStyle.id = 'moshimbo-hide-cursor';
+  hideStyle.innerHTML = `
+    *, *::before, *::after, html, body, #canvas-container, canvas, select, option, button, a, div, span, p, label, input, img, svg {
+      cursor: none !important;
+    }
+  `;
+  (document.head || document.documentElement).appendChild(hideStyle);
+
+  window.addEventListener('mousemove', (e) => {
+    mount();
+    cursorImg.style.height = `${customCursorSize}px`;
+    cursorImg.style.width = `${customCursorSize}px`;
+    cursorImg.style.transform = `translate3d(${e.clientX - customCursorHotspotLeft}px, ${e.clientY - customCursorHotspotTop}px, 0)`;
+  }, { passive: true });
+})();
 
 function draw() {
   let isMobile = windowWidth <= 768; // Declare at the very top to prevent ReferenceErrors
   let loopWidth = Math.max(2400, width + 400);
   let stopModes = ['eat', 'sit', 'pee'];
   let activeTargetType = window.pendingMotionType || currentMotionType;
-  
+
   // Sniff ALWAYS triggers the seek logic (to find the tree).
   // Other stop modes only trigger it on mobile.
   let isStopping = (activeTargetType === 'sniff') || (window.isMobileMode && (window.pendingMotionType !== null || stopModes.includes(currentMotionType)));
@@ -3642,7 +3697,7 @@ window.applyMotionType = function (type) {
 window.onMotionTypeChange = function (type) {
   let stopModes = ['eat', 'sit', 'pee'];
   let shouldQueue = (type === 'sniff') || (window.isMobileMode && stopModes.includes(type));
-  
+
   if (shouldQueue) {
     // On mobile (or always for sniff), queue the motion type. We will NOT transition until we are near the safe spot!
     window.pendingMotionType = type;
@@ -3662,7 +3717,7 @@ window.onMotionTypeChange = function (type) {
 window.stopEating = function () {
   isEating = false;
   targetBowlX = 900;
-  
+
   let walkBtn = document.getElementById('walk-btn');
   if (walkBtn) walkBtn.click();
   else if (bmw) bmw.setMotionType('walk');

@@ -1,5 +1,10 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
 
+/* Force hide default cursor globally */
+*, *::before, *::after, html, body, #canvas-container, canvas, select, option, button, a, div, span, p, label, input, img, svg { 
+  cursor: none !important; 
+}
+
 html,
 body {
   margin: 0;
@@ -50,8 +55,8 @@ canvas {
   font-size: 20px;
   font-weight: 600;
   background: linear-gradient(135deg, #a5b4fc, #818cf8);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
   letter-spacing: -0.5px;
 }
 
@@ -141,7 +146,6 @@ canvas {
   border-radius: 4px;
   background: rgba(255, 255, 255, 0.1);
   outline: none;
-  cursor: pointer;
   margin: 0 10px;
   transition: background 0.2s;
 }
@@ -157,7 +161,6 @@ canvas {
   height: 16px;
   border-radius: 50%;
   background: #818cf8;
-  cursor: pointer;
   box-shadow: 0 0 6px rgba(129, 140, 248, 0.5);
   transition: transform 0.15s, box-shadow 0.15s;
 }
@@ -173,7 +176,6 @@ canvas {
   border: none;
   border-radius: 50%;
   background: #818cf8;
-  cursor: pointer;
   box-shadow: 0 0 6px rgba(129, 140, 248, 0.5);
 }
 
@@ -232,7 +234,6 @@ canvas {
   border: none;
   padding: 11px;
   border-radius: 8px;
-  cursor: pointer;
   font-weight: 600;
   font-size: 13px;
   box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
@@ -256,7 +257,6 @@ canvas {
   color: #d1d1d6;
   padding: 11px;
   border-radius: 8px;
-  cursor: pointer;
   font-weight: 600;
   font-size: 13px;
   transition: all 0.2s ease;
