@@ -11,8 +11,10 @@
 // See the URL below in detail.
 // https://www.biomotionlab.ca/
 
+const BMW_TYPE_HUMAN = 0;
 const BMW_TYPE_DOG = 1;
 const BMW_TYPE_CAT = 1; // (kept for compatibility)
+const BMW_TYPE_PIGEON = 2;
 
 class BMWalker {
   // Constructor
