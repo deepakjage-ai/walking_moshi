@@ -2897,7 +2897,7 @@ let lastPositionSwitchTime = 0;
 
 let peeParticles = [];
 let releasePeeParticles = true;
-let targetSliderSpeed = 1.0;
+let targetSliderSpeed = 0.75;
 let currentSpeed = 1.0;
 let targetSliderHappiness = 0.0;
 let currentHappiness = 3;
@@ -3048,9 +3048,9 @@ function setupWebflowUI() {
         // Active state
         for (const otherId of Object.keys(buttons)) {
            let otherBtn = document.getElementById(otherId);
-           if (otherBtn) otherBtn.classList.remove('active');
+           if (otherBtn) otherBtn.classList.remove('selected');
         }
-        btn.classList.add('active');
+        btn.classList.add('selected');
       });
     }
   }
@@ -3059,7 +3059,7 @@ function setupWebflowUI() {
   if (funBtn) {
     funBtn.addEventListener('click', () => {
       window.setImagesMode && window.setImagesMode(currentImagesMode === 'logo' ? 'small' : 'logo');
-      funBtn.classList.toggle('active');
+      funBtn.classList.toggle('selected');
     });
   }
 }
@@ -3645,7 +3645,7 @@ window.applyMotionType = function (type) {
   }
 
   if (type === 'walk') {
-    targetSliderSpeed = 1.0;
+    targetSliderSpeed = 0.75;
     targetSliderHappiness = 5.0;
   } else if (type === 'run') {
     targetSliderSpeed = 2.0;
@@ -3709,7 +3709,7 @@ window.stopPeeing = function () {
 window.resetAllOffsets = function () {
   peeParticles = [];
   if (bmw) bmw.isConfigLoaded = false;
-  targetSliderSpeed = 1.0;
+  targetSliderSpeed = 0.75;
   targetSliderHappiness = 0.0;
   for (let i = 0; i < 20; i++) {
     bmw.setJointOffset(i, 0, 0, 0);
