@@ -9,10 +9,15 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.0/p5.min.js"></script>
   <!-- Link to stylesheet -->
   <!-- Link to stylesheet -->
-  <link rel="stylesheet" href="style.css?v=5">
+  <link rel="stylesheet" href="style.css?v=6">
   <style>
     *, *::before, *::after, html, body, #canvas-container, canvas, select, option, button, a, div, span, p, label, input, img, svg {
       cursor: none !important;
+    }
+    @media screen and (max-width: 768px) {
+      #bite-btn {
+        display: none !important;
+      }
     }
   </style>
 </head>
@@ -46,7 +51,7 @@
   </div>
 
   <!-- Load the main sketch file -->
-  <script src="main.js?v=26"></script>
+  <script src="main.js?v=27"></script>
 
 </body>
 
