@@ -2933,32 +2933,43 @@ let currentMotionType = "walk";
 
 let bgTreeImg, bgRainbowImg, bgSpaceshipImg, bgMushroomImg;
 function preload() {
-  bgTreeImg = loadImage('moshiexe/background/tree.avif');
-  bgRainbowImg = loadImage('moshiexe/background/rainbow.avif');
-  bgSpaceshipImg = loadImage('moshiexe/background/spaceship.avif');
-  bgMushroomImg = loadImage('moshiexe/background/mushroom.avif');
+  let wf = "https://cdn.prod.website-files.com/682599915e115cb1f3b11952/";
+  bgTreeImg = loadImage(wf + '6a8fc493c5ebb416ebcfb645_tree.avif');
+  bgRainbowImg = loadImage(wf + '6a8fc493dec834181956d157_rainbow.avif');
+  bgSpaceshipImg = loadImage(wf + '6a8fc4935b6b9edf9b058e3b_spaceship.avif');
+  bgMushroomImg = loadImage(wf + '6a8fc493437e07816ea4abf4_mushroom.avif');
 
-  fixedLogoImages[0] = loadImage('moshimbo logo svg/m.svg');
-  fixedLogoImages[2] = loadImage('moshimbo logo svg/b.svg');
-  fixedLogoImages[3] = loadImage('moshimbo logo svg/o.svg');
+  fixedLogoImages[0] = loadImage(wf + '6a8fc41dcd7764f54d16092d_m.svg');
+  fixedLogoImages[2] = loadImage(wf + '6a8fc41dcd7764f54d160930_b.svg');
+  fixedLogoImages[3] = loadImage(wf + '6a8fc41d4a84a8e59e42f229_o.svg');
 
-  logoImages.push(loadImage('moshimbo logo svg/m.svg'));
-  logoImages.push(loadImage('moshimbo logo svg/o.svg'));
-  logoImages.push(loadImage('moshimbo logo svg/s.svg'));
-  logoImages.push(loadImage('moshimbo logo svg/h.svg'));
-  logoImages.push(loadImage('moshimbo logo svg/i.svg'));
-  logoImages.push(loadImage('moshimbo logo svg/m2.svg'));
-  logoImages.push(loadImage('moshimbo logo svg/b.svg'));
-  logoImages.push(loadImage('moshimbo logo svg/o2.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41dcd7764f54d16092d_m.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41d4a84a8e59e42f229_o.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41d6001358cc8abf8b1_s.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41d2d8d2fcfe6ce8ba4_h.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41dcd99f2b5b7066d22_i.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41dc5ebb416ebcf962b_m2.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41dcd7764f54d160930_b.svg'));
+  logoImages.push(loadImage(wf + '6a8fc41d11c6f066666d9ff1_o2.svg'));
 
-  let smallFiles = [
-    "disco ball.avif", "octopus.avif", "lips.avif", "pizza.avif", "bomb.avif",
-    "dinosaur.avif", "brain.avif", "banana.avif", "chilli.avif",
-    "duck.avif", "cherries.avif", "unicorn.avif", "lipstick.avif"
+  let smallLinks = [
+    "6a8fc51841975f14932f8f67_image0.avif",
+    "6a8fc518525735221fbf18c9_image1.avif",
+    "6a8fc518c5ebb416ebcfdb0e_image2.avif",
+    "6a8fc518dec834181956ee41_image3.avif",
+    "6a8fc5185f737fe02f5dac80_image4.avif",
+    "6a8fc5187d9488d6e73d724f_image5.avif",
+    "6a8fc518ae785707565b58a5_image6.avif",
+    "6a8fc5180ec37c4f7d2100e8_image7.avif",
+    "6a8fc51754d9e5f756e722c5_image8.avif",
+    "6a8fc518e576a29bc66f8262_image9.avif",
+    "6a8fc5172d8d2fcfe6ced832_image10.avif",
+    "6a8fc518dec834181956ee2f_image11.avif",
+    "6a8fc5186d7c133127234a88_image12.avif"
   ];
-  smallFiles.forEach(f => smallImages.push(loadImage('moshiexe/small/' + f)));
+  smallLinks.forEach(l => smallImages.push(loadImage(wf + l)));
 
-  bowlImg = loadImage('bowlmain.png');
+  bowlImg = loadImage(wf + '6a8fc78afa2b23c464d8db0c_bowlmain.avif');
 }
 
 // 1. Custom Joint Index Names (since Dog type in the library doesn't have default names)
