@@ -3054,15 +3054,16 @@ function setup() {
 function draw() {
   let isMobile = windowWidth <= 768; // Declare at the very top to prevent ReferenceErrors
   let loopWidth = Math.max(2400, width + 400);
-  let stopModes = ['sniff', 'eat', 'sit', 'pee'];
-  // On desktop, we decelerate in-place, so we don't trigger the safe-zone seek logic.
-  let isStopping = window.isMobileMode && (window.pendingMotionType !== null || stopModes.includes(currentMotionType));
+  let stopModes = ['eat', 'sit', 'pee'];
+  let activeTargetType = window.pendingMotionType || currentMotionType;
+  
+  // Sniff ALWAYS triggers the seek logic (to find the tree).
+  // Other stop modes only trigger it on mobile.
+  let isStopping = (activeTargetType === 'sniff') || (window.isMobileMode && (window.pendingMotionType !== null || stopModes.includes(currentMotionType)));
 
   if (isStopping) {
     let currentWrapped = bgScrollX % loopWidth;
     let baseLoops = bgScrollX - currentWrapped;
-
-    let activeTargetType = window.pendingMotionType || currentMotionType;
     let safeSpots;
     if (activeTargetType === 'sniff') {
       safeSpots = [0, loopWidth]; // Sniff mode MUST align perfectly with the tree
@@ -3636,9 +3637,11 @@ window.applyMotionType = function (type) {
 };
 
 window.onMotionTypeChange = function (type) {
-  let stopModes = ['sniff', 'eat', 'sit', 'pee'];
-  if (window.isMobileMode && stopModes.includes(type)) {
-    // On mobile, queue the motion type. We will NOT transition until we are near the safe spot!
+  let stopModes = ['eat', 'sit', 'pee'];
+  let shouldQueue = (type === 'sniff') || (window.isMobileMode && stopModes.includes(type));
+  
+  if (shouldQueue) {
+    // On mobile (or always for sniff), queue the motion type. We will NOT transition until we are near the safe spot!
     window.pendingMotionType = type;
 
     // If we are currently stopped (e.g. sitting) and the user clicks a different stop mode,
