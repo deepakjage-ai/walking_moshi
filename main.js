@@ -11,15 +11,12 @@
 // See the URL below in detail.
 // https://www.biomotionlab.ca/
 
-const BMW_TYPE_HUMAN = 0;
 const BMW_TYPE_DOG = 1;
 const BMW_TYPE_CAT = 1; // (kept for compatibility)
-const BMW_TYPE_PIGEON = 2;
-const BMW_TYPE_BOX = 3; // (for debug)
 
 class BMWalker {
   // Constructor
-  constructor(type = BMW_TYPE_HUMAN) {
+  constructor(type = BMW_TYPE_DOG) {
     // External variables
     // Boundary values
     this.maxSpeed = 4.0;
@@ -2936,30 +2933,30 @@ let currentMotionType = "walk";
 
 let bgTreeImg, bgRainbowImg, bgSpaceshipImg, bgMushroomImg;
 function preload() {
-  bgTreeImg = loadImage('images_rep/background/tree.png');
-  bgRainbowImg = loadImage('images_rep/background/rainbow.png');
-  bgSpaceshipImg = loadImage('images_rep/background/spaceship.png');
-  bgMushroomImg = loadImage('images_rep/background/mushroom.png');
+  bgTreeImg = loadImage('moshiexe/background/tree.avif');
+  bgRainbowImg = loadImage('moshiexe/background/rainbow.avif');
+  bgSpaceshipImg = loadImage('moshiexe/background/spaceship.avif');
+  bgMushroomImg = loadImage('moshiexe/background/mushroom.avif');
 
-  fixedLogoImages[0] = loadImage('logo/svg/m.svg');
-  fixedLogoImages[2] = loadImage('logo/svg/b.svg');
-  fixedLogoImages[3] = loadImage('logo/svg/o.svg');
+  fixedLogoImages[0] = loadImage('moshimbo logo svg/m.svg');
+  fixedLogoImages[2] = loadImage('moshimbo logo svg/b.svg');
+  fixedLogoImages[3] = loadImage('moshimbo logo svg/o.svg');
 
-  logoImages.push(loadImage('logo/svg/m.svg'));
-  logoImages.push(loadImage('logo/svg/o.svg'));
-  logoImages.push(loadImage('logo/svg/s.svg'));
-  logoImages.push(loadImage('logo/svg/h.svg'));
-  logoImages.push(loadImage('logo/svg/i.svg'));
-  logoImages.push(loadImage('logo/svg/m2.svg'));
-  logoImages.push(loadImage('logo/svg/b.svg'));
-  logoImages.push(loadImage('logo/svg/o2.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/m.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/o.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/s.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/h.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/i.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/m2.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/b.svg'));
+  logoImages.push(loadImage('moshimbo logo svg/o2.svg'));
 
   let smallFiles = [
-    "image0.png", "image1.png", "image2.png", "image3.png", "image4.png",
-    "image5.png", "image6.png", "image7.png", "image8.png",
-    "image9.png", "image10.png", "image11.png", "image12.png"
+    "disco ball.avif", "octopus.avif", "lips.avif", "pizza.avif", "bomb.avif",
+    "dinosaur.avif", "brain.avif", "banana.avif", "chilli.avif",
+    "duck.avif", "cherries.avif", "unicorn.avif", "lipstick.avif"
   ];
-  smallFiles.forEach(f => smallImages.push(loadImage('images_rep/Small/' + f)));
+  smallFiles.forEach(f => smallImages.push(loadImage('moshiexe/small/' + f)));
 
   bowlImg = loadImage('bowlmain.png');
 }
@@ -3019,13 +3016,46 @@ const dogBones = [
   [16, 15]  // R-Knee to R-Paw
 ];
 
+function setupWebflowUI() {
+  const buttons = {
+    'walk-btn': 'walk',
+    'sniff-btn': 'sniff',
+    'run-btn': 'run',
+    'sit-btn': 'sit',
+    'pee-btn': 'pee',
+    'eat-btn': 'eat',
+    'bite-btn': 'bite'
+  };
+  
+  for (const [id, motion] of Object.entries(buttons)) {
+    const btn = document.getElementById(id);
+    if (btn) {
+      btn.addEventListener('click', () => {
+        window.onMotionTypeChange(motion);
+        // Active state
+        for (const otherId of Object.keys(buttons)) {
+           let otherBtn = document.getElementById(otherId);
+           if (otherBtn) otherBtn.classList.remove('active');
+        }
+        btn.classList.add('active');
+      });
+    }
+  }
+
+  const funBtn = document.getElementById('fun-btn');
+  if (funBtn) {
+    funBtn.addEventListener('click', () => {
+      window.setImagesMode && window.setImagesMode(currentImagesMode === 'logo' ? 'small' : 'logo');
+      funBtn.classList.toggle('active');
+    });
+  }
+}
+
 function setup() {
 
   let canvas = createCanvas(windowWidth, windowHeight);
   canvas.parent('canvas-container');
-
-  // Adjust UI positions that might have relied on fixed width?
-  // The user UI controls (buttons, sliders) are fixed at top-left, which is fine.
+  setupWebflowUI();
 
   // Type 1 is the Dog walk cycle (modified from the original cat walk cycle)
   bmw = new BMWalker(BMW_TYPE_DOG);
@@ -3619,20 +3649,8 @@ window.applyMotionType = function (type) {
     targetSliderSpeed = 1.0; // Keep the timer ticking so the dog can wiggle!
   }
 
-  let stopPeeBtn = document.getElementById('stop-pee-btn');
-  let stopEatBtn = document.getElementById('stop-eat-btn');
-
   if (type === 'pee') {
     releasePeeParticles = true;
-    if (stopPeeBtn) stopPeeBtn.style.display = 'inline-block';
-  } else {
-    if (stopPeeBtn) stopPeeBtn.style.display = 'none';
-  }
-
-  if (type === 'eat') {
-    if (stopEatBtn) stopEatBtn.style.display = 'inline-block';
-  } else {
-    if (stopEatBtn) stopEatBtn.style.display = 'none';
   }
 };
 
@@ -3659,12 +3677,10 @@ window.onMotionTypeChange = function (type) {
 window.stopEating = function () {
   isEating = false;
   targetBowlX = 900;
-  let stopEatBtn = document.getElementById('stop-eat-btn');
-  if (stopEatBtn) stopEatBtn.style.display = 'none';
-
-  let select = document.getElementById('motion-type-select');
-  if (select) select.value = 'walk';
-  if (bmw) bmw.setMotionType('walk');
+  
+  let walkBtn = document.getElementById('walk-btn');
+  if (walkBtn) walkBtn.click();
+  else if (bmw) bmw.setMotionType('walk');
 
   window.resetAllOffsets();
 };
