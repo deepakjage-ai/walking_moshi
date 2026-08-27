@@ -187,55 +187,62 @@ function setup() {
 }
 
 function draw() {
+  let isMobile = windowWidth <= 768; // Declare at the very top to prevent ReferenceErrors
   let loopWidth = Math.max(2400, width + 400);
-  let stopModes = ['sniff', 'eat', 'sit', 'pee', 'bite'];
-  let isStopping = stopModes.includes(currentMotionType);
+  let stopModes = ['sniff', 'eat', 'sit', 'pee'];
+  let isStopping = window.pendingMotionType !== null || stopModes.includes(currentMotionType);
 
   if (isStopping) {
-    if (currentSpeed === 0) {
-      // We are perfectly locked at a safe zone. DO NOTHING!
-      // This completely prevents the background from ever moving while stopped.
+    let currentWrapped = bgScrollX % loopWidth;
+    let baseLoops = bgScrollX - currentWrapped;
+    
+    let activeTargetType = window.pendingMotionType || currentMotionType;
+    let safeSpots;
+    if (activeTargetType === 'sniff') {
+      safeSpots = [0, loopWidth]; // Sniff mode MUST align perfectly with the tree
     } else {
-      let currentWrapped = bgScrollX % loopWidth;
-      let baseLoops = bgScrollX - currentWrapped;
+      // 85, 1150, 1850 perfectly center the dog in the empty gaps between the trees, rainbow, and mushroom
+      safeSpots = [85, 1150, 1850, loopWidth + 85]; 
+    }
+    
+    // Find the safe spot we are currently approaching. 
+    let targetWrapped = safeSpots.find(s => s >= currentWrapped - 2.0);
+    if (targetWrapped === undefined) targetWrapped = loopWidth;
+    
+    let targetScroll = baseLoops + targetWrapped;
+    let distance = Math.max(0, targetScroll - bgScrollX);
+    
+    let maxApproachSpeed = (activeTargetType === 'sniff') ? 2.0 : 1.0;
+    let brakingDist = (maxApproachSpeed > 1.0) ? 150.0 : 60.0; 
       
-      // Define exact background scroll positions where no objects overlap the dog
-      let safeSpots;
-      if (currentMotionType === 'sniff') {
-        safeSpots = [0, loopWidth]; // Sniff mode MUST align perfectly with the tree
-      } else {
-        // 120, 1150, 1850 perfectly center the dog in the empty gaps between the trees, rainbow, and mushroom
-        safeSpots = [120, 1150, 1850, loopWidth + 120]; 
+    // If we have a pending type and we've reached the braking zone, START the transition!
+    if (window.pendingMotionType !== null && distance <= brakingDist) {
+      window.applyMotionType(window.pendingMotionType);
+      window.pendingMotionType = null; // Transition has begun
+    }
+    
+    if (distance <= brakingDist) {
+      // Smooth kinematic deceleration (v = sqrt(2ad)) to stop exactly on the target
+      currentSpeed = Math.min(currentSpeed, maxApproachSpeed * Math.sqrt(distance / brakingDist));
+      if (distance < 0.5) {
+        currentSpeed = 0;
+        bgScrollX = targetScroll; // Snap perfectly to the spot
       }
+    } else {
+      // Accelerate toward the target until we get close enough to brake
+      currentSpeed = Math.min(maxApproachSpeed, currentSpeed + 0.05);
+    }
       
-      // Find the safe spot we are currently approaching. 
-      // The -2.0 tolerance prevents the target from jumping to the next one when we are 1 pixel away!
-      let targetWrapped = safeSpots.find(s => s >= currentWrapped - 2.0);
-      if (targetWrapped === undefined) targetWrapped = loopWidth;
+    // Tie background speed perfectly to the dog's leg animation speed
+    let bgSpeed = 0;
+    if (currentSpeed <= 1.0) {
+      bgSpeed = lerp(0, walkingSpeed, currentSpeed);
+    } else {
+      bgSpeed = lerp(walkingSpeed, runningSpeed, currentSpeed - 1.0);
+    }
       
-      let targetScroll = baseLoops + targetWrapped;
-      // Clamp to 0 to completely prevent negative square roots (NaN bugs)
-      let distance = Math.max(0, targetScroll - bgScrollX);
-      
-      let brakingDist = 60.0; // Distance required to gracefully brake to 0
-      
-      if (distance <= brakingDist) {
-        // Smooth kinematic deceleration (v = sqrt(2ad)) to stop exactly on the target
-        currentSpeed = Math.min(currentSpeed, Math.sqrt(distance / brakingDist));
-        if (distance < 0.5) {
-          currentSpeed = 0;
-          bgScrollX = targetScroll; // Snap perfectly to the spot
-        }
-      } else {
-        // Keep walking at full speed until we get close enough to brake
-        currentSpeed = Math.min(1.0, currentSpeed + 0.05);
-      }
-      
-      // Tie background speed perfectly to the dog's leg animation speed
-      let bgSpeed = lerp(0, walkingSpeed, currentSpeed);
-      if (currentSpeed > 0) {
-          bgScrollX += bgSpeed;
-      }
+    if (currentSpeed > 0) {
+        bgScrollX += bgSpeed;
     }
   } else {
     // Normal walking / running / user-controlled speed
@@ -247,7 +254,10 @@ function draw() {
     }
     
     let bgSpeed = 0;
-    if (currentSpeed <= 1.0) {
+    if (currentMotionType === 'bite') {
+      bgSpeed = 0; // Freeze the background instantly
+      currentSpeed = 1.0; // Force the animation to keep playing so it wiggles
+    } else if (currentSpeed <= 1.0) {
       bgSpeed = lerp(0, walkingSpeed, currentSpeed);
     } else {
       bgSpeed = lerp(walkingSpeed, runningSpeed, currentSpeed - 1.0);
@@ -255,8 +265,8 @@ function draw() {
     bgScrollX += bgSpeed;
   }
 
-  if (bmw.speed !== currentSpeed) {
-    bmw.setSpeed(currentSpeed);
+  if (bmw) {
+    bmw.overrideSpeed = currentSpeed;
   }
 
   background(0);
@@ -270,7 +280,6 @@ function draw() {
 
 
   // Mobile layout state
-  let isMobile = windowWidth <= 768;
   window.isMobileMode = isMobile;
 
   // Dynamically hide/disable the bite option on mobile (since mouse tracking is tricky on touch)
@@ -710,7 +719,9 @@ window.onAmplitudeChange = function (index, value) {
   if (el) el.innerText = val.toFixed(2) + "×";
 };
 
-window.onMotionTypeChange = function (type) {
+window.pendingMotionType = null;
+
+window.applyMotionType = function(type) {
   currentMotionType = type;
   if (bmw && bmw.setMotionType) {
     if (type === 'eat') {
@@ -733,8 +744,12 @@ window.onMotionTypeChange = function (type) {
   } else if (type === 'sniff') {
     targetSliderSpeed = 0.0;
     targetSliderHappiness = 1.0;
-  } else if (type === 'sit' || type === 'pee' || type === 'bite') {
+  } else if (type === 'sit') {
     targetSliderSpeed = 0.0;
+  } else if (type === 'pee') {
+    targetSliderSpeed = 0.0;
+  } else if (type === 'bite') {
+    targetSliderSpeed = 1.0; // Keep the timer ticking so the dog can wiggle!
   }
 
   let stopPeeBtn = document.getElementById('stop-pee-btn');
@@ -751,6 +766,24 @@ window.onMotionTypeChange = function (type) {
     if (stopEatBtn) stopEatBtn.style.display = 'inline-block';
   } else {
     if (stopEatBtn) stopEatBtn.style.display = 'none';
+  }
+};
+
+window.onMotionTypeChange = function (type) {
+  let stopModes = ['sniff', 'eat', 'sit', 'pee'];
+  if (stopModes.includes(type)) {
+    // Queue the motion type. We will NOT transition until we are near the safe spot!
+    window.pendingMotionType = type;
+    
+    // If we are currently stopped (e.g. sitting) and the user clicks a different stop mode,
+    // we need to stand up and walk to the new target.
+    if (currentSpeed === 0 && currentMotionType !== type) {
+      window.applyMotionType('walk');
+    }
+  } else {
+    // Walk or Run apply immediately
+    window.pendingMotionType = null;
+    window.applyMotionType(type);
   }
 };
 

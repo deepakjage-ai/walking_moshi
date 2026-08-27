@@ -161,11 +161,12 @@ class BMWalker {
       progressChanged = true;
     }
 
+    let oldSpeed = this.speed;
     if (this.type === BMW_TYPE_DOG) {
-      this.speed = 1.0 + this.runProgress * 1.0;
+      this.speed = this.overrideSpeed !== undefined ? this.overrideSpeed : (1.0 + this.runProgress * 1.0);
     }
 
-    if (progressChanged) {
+    if (progressChanged || oldSpeed !== this.speed) {
       this.updateBlendedSizes();
       this.walker_translation_speed = this.calcTranslationSpeed();
       let newFreq = this.getFrequency();
