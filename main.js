@@ -1,4 +1,4 @@
-// BMWalker.js
+22// BMWalker.js
 // Biological Motion 'Walker' library for JavaScript.
 
 // LICENSE
@@ -1013,10 +1013,10 @@ class BMWalker {
       peeMarkers[i + this.nummarkers * 2] = baseMarkers[i + this.nummarkers * 2] + offset.z;
     }
 
-    // Dynamic Tail Wag using walkertime and scaled by happiness
+    // Dynamic Tail Wag using absolute real time so it keeps wagging even when legs freeze
     let h = Math.max(0.15, this.happiness / 10.0); // minimum wag factor of 0.15
     if (h !== 0) {
-      let t = walkertime;
+      let t = this.tm.getTimer() / 90.0; // Uncouple from frozen walkertime
       let L1 = 26.0;
       let L2 = 45.0;
       let L3 = 50.0;
@@ -1124,10 +1124,10 @@ class BMWalker {
       sniffMarkers[i + this.nummarkers * 2] = scaledZ + shiftZ;
     }
 
-    // Dynamic Tail Wag using walkertime and scaled by happiness
+    // Dynamic Tail Wag using absolute real time so it keeps wagging even when legs freeze
     let h = Math.max(0.15, this.happiness / 10.0);
     if (h !== 0) {
-      let t = walkertime;
+      let t = this.tm.getTimer() / 90.0; // Uncouple from frozen walkertime
       let L1 = 26.0 * scaleFactor;
       let L2 = 45.0 * scaleFactor;
       let L3 = 50.0 * scaleFactor;
@@ -3060,32 +3060,32 @@ function draw() {
   if (isStopping) {
     let currentWrapped = bgScrollX % loopWidth;
     let baseLoops = bgScrollX - currentWrapped;
-    
+
     let activeTargetType = window.pendingMotionType || currentMotionType;
     let safeSpots;
     if (activeTargetType === 'sniff') {
       safeSpots = [0, loopWidth]; // Sniff mode MUST align perfectly with the tree
     } else {
       // 85, 1150, 1850 perfectly center the dog in the empty gaps between the trees, rainbow, and mushroom
-      safeSpots = [85, 1150, 1850, loopWidth + 85]; 
+      safeSpots = [85, 1150, 1850, loopWidth + 85];
     }
-    
+
     // Find the safe spot we are currently approaching. 
     let targetWrapped = safeSpots.find(s => s >= currentWrapped - 2.0);
     if (targetWrapped === undefined) targetWrapped = loopWidth;
-    
+
     let targetScroll = baseLoops + targetWrapped;
     let distance = Math.max(0, targetScroll - bgScrollX);
-    
+
     let maxApproachSpeed = (activeTargetType === 'sniff') ? 2.0 : 1.0;
-    let brakingDist = (maxApproachSpeed > 1.0) ? 150.0 : 60.0; 
-      
+    let brakingDist = (maxApproachSpeed > 1.0) ? 150.0 : 60.0;
+
     // If we have a pending type and we've reached the braking zone, START the transition!
     if (window.pendingMotionType !== null && distance <= brakingDist) {
       window.applyMotionType(window.pendingMotionType);
       window.pendingMotionType = null; // Transition has begun
     }
-    
+
     if (distance <= brakingDist) {
       // Smooth kinematic deceleration (v = sqrt(2ad)) to stop exactly on the target
       currentSpeed = Math.min(currentSpeed, maxApproachSpeed * Math.sqrt(distance / brakingDist));
@@ -3097,7 +3097,7 @@ function draw() {
       // Accelerate toward the target until we get close enough to brake
       currentSpeed = Math.min(maxApproachSpeed, currentSpeed + 0.05);
     }
-      
+
     // Tie background speed perfectly to the dog's leg animation speed
     let bgSpeed = 0;
     if (currentSpeed <= 1.0) {
@@ -3105,9 +3105,9 @@ function draw() {
     } else {
       bgSpeed = lerp(walkingSpeed, runningSpeed, currentSpeed - 1.0);
     }
-      
+
     if (currentSpeed > 0) {
-        bgScrollX += bgSpeed;
+      bgScrollX += bgSpeed;
     }
   } else {
     // Normal walking / running / user-controlled speed
@@ -3117,7 +3117,7 @@ function draw() {
     } else {
       currentSpeed += Math.sign(targetSliderSpeed - currentSpeed) * speedStep;
     }
-    
+
     let bgSpeed = 0;
     if (currentMotionType === 'bite') {
       bgSpeed = 0; // Freeze the background instantly
@@ -3186,7 +3186,7 @@ function draw() {
   translate(cameraOffsetX, 0);
   // Background scroll is now updated concurrently with currentSpeed kinematics at the top of draw()
   // to ensure perfect synchronization between the dog's legs and the ground.
-  
+
   // (We redefine loopWidth here for the drawWrapped function below)
   let loopWidthWrap = Math.max(2400, width + 400);
 
@@ -3586,7 +3586,7 @@ window.onAmplitudeChange = function (index, value) {
 
 window.pendingMotionType = null;
 
-window.applyMotionType = function(type) {
+window.applyMotionType = function (type) {
   currentMotionType = type;
   if (bmw && bmw.setMotionType) {
     if (type === 'eat') {
@@ -3639,7 +3639,7 @@ window.onMotionTypeChange = function (type) {
   if (stopModes.includes(type)) {
     // Queue the motion type. We will NOT transition until we are near the safe spot!
     window.pendingMotionType = type;
-    
+
     // If we are currently stopped (e.g. sitting) and the user clicks a different stop mode,
     // we need to stand up and walk to the new target.
     if (currentSpeed === 0 && currentMotionType !== type) {
@@ -3855,9 +3855,9 @@ class PeeParticle {
     let imgAspectRatio = this.img.width / this.img.height;
     let imgW = this.size * imgAspectRatio;
     let imgH = this.size;
-    
+
     image(this.img, 0, 0, imgW, imgH);
-    
+
     // Reset global alpha so it doesn't affect other rendering
     drawingContext.globalAlpha = 1.0;
     pop();
@@ -3914,7 +3914,7 @@ function updateAndDrawPeeParticles(markers) {
             let clearance = ((pA.size + pB.size) / 2) * 0.85;
             let dx = pA.x - pB.x;
             let dy = pA.y - pB.y;
-            
+
             // Fast bounding box check before expensive Math.sqrt
             if (Math.abs(dx) > clearance || Math.abs(dy) > clearance) continue;
 
