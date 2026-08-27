@@ -3055,7 +3055,8 @@ function draw() {
   let isMobile = windowWidth <= 768; // Declare at the very top to prevent ReferenceErrors
   let loopWidth = Math.max(2400, width + 400);
   let stopModes = ['sniff', 'eat', 'sit', 'pee'];
-  let isStopping = window.pendingMotionType !== null || stopModes.includes(currentMotionType);
+  // On desktop, we decelerate in-place, so we don't trigger the safe-zone seek logic.
+  let isStopping = window.isMobileMode && (window.pendingMotionType !== null || stopModes.includes(currentMotionType));
 
   if (isStopping) {
     let currentWrapped = bgScrollX % loopWidth;
@@ -3636,8 +3637,8 @@ window.applyMotionType = function (type) {
 
 window.onMotionTypeChange = function (type) {
   let stopModes = ['sniff', 'eat', 'sit', 'pee'];
-  if (stopModes.includes(type)) {
-    // Queue the motion type. We will NOT transition until we are near the safe spot!
+  if (window.isMobileMode && stopModes.includes(type)) {
+    // On mobile, queue the motion type. We will NOT transition until we are near the safe spot!
     window.pendingMotionType = type;
 
     // If we are currently stopped (e.g. sitting) and the user clicks a different stop mode,
