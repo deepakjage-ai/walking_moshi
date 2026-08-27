@@ -2048,21 +2048,11 @@ class BMWalker {
 class BMWTimer {
   // Constructor
   constructor() {
-    const d = new Date().valueOf();
-    this.time = d;
-    this.start = d;
-
-    const precision = 10; // 10msec
-    setInterval(
-      function () {
-        this.time += precision;
-      }.bind(this),
-      precision
-    );
+    this.start = performance.now();
   }
 
   getTimer() {
-    return this.time - this.start;
+    return performance.now() - this.start;
   }
 }
 
@@ -3179,17 +3169,7 @@ function draw() {
   // Mobile layout state
   window.isMobileMode = isMobile;
 
-  // Dynamically hide/disable the bite option on mobile (since mouse tracking is tricky on touch)
-  let biteOption = document.querySelector('option[value="bite"]');
-  if (biteOption) {
-    biteOption.hidden = isMobile;
-    biteOption.disabled = isMobile;
-    if (isMobile && currentMotionType === 'bite') {
-      onMotionTypeChange('walk');
-      let selectEl = document.getElementById('motion-type-select');
-      if (selectEl) selectEl.value = 'walk';
-    }
-  }
+  window.isMobileMode = isMobile;
 
   // Move origin to center so walker is visible
   translate(width / 2, height / 2);
@@ -3197,8 +3177,13 @@ function draw() {
     scale(0.55); // Global dog & particle reduction
   }
 
-  // Smoothly pan camera to configured offsets based on active mode (Mobile Only)
+  // Smoothly pan camera to configured offsets based on active mode
   let targetCameraOffsetX = 0;
+
+  if (currentMotionType === 'walk' || currentMotionType === 'run') {
+    targetCameraOffsetX = isMobile ? 10 : 25;
+  }
+
   if (isMobile) {
     if (isEating) {
       targetCameraOffsetX = cameraOffsetEat;
